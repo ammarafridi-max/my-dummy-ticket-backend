@@ -11,6 +11,12 @@ const FormModel = require("./models/FormModel");
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors());
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", process.env.FRONTEND_URL);
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  next();
+});
 
 // Nodemailer
 let transporter = nodemailer.createTransport({
@@ -53,7 +59,7 @@ app.post("/", (req, res) => {
           formData.firstName + " " + formData.lastName
         } needs a dummy ticket from ${formData.from} to ${
           formData.to
-        }. Phone number is ${formData.number} and email address is ${
+        }. Phone number is ${Number(formData.number)} and email address is ${
           formData.email
         }`,
       };
