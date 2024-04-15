@@ -29,7 +29,7 @@ let transporter = nodemailer.createTransport({
 mongoose
   .connect(process.env.DB_URL)
   .then(() => console.log(`Connected to MonogDB successfully`))
-  .catch(() => console.log(`Error connecting to MongoDB ${error}`));
+  .catch((error) => console.log(`Error connecting to MongoDB ${error}`));
 
 // Routes
 app.post("/", (req, res) => {
@@ -57,22 +57,25 @@ app.post("/", (req, res) => {
           formData.firstName + " " + formData.lastName
         } needs a dummy ticket from ${formData.from} to ${
           formData.to
-        }. Phone number is ${Number(formData.number)} and email address is ${
+        }. Phone number is ${formData.number} and email address is ${
           formData.email
         }`,
       };
       transporter.sendMail(mailOptions, (error, info) => {
         if (error) {
           console.error("Error occurred:", error.message);
+          res.status(500).send({ error: "Error sending email" }); // Sending error to client
           return;
         } else {
           console.log("Email sent successfully!");
+          res.send("Email sent successfully!"); // Sending success message to client
         }
       });
     })
-    .catch((error) => console.log(`Error sending data to DB ${error}`));
-
-  res.send("Received the data successfully");
+    .catch((error) => {
+      console.log(`Error sending data to DB ${error}`);
+      res.status(500).send({ error: "Error saving data to database" }); // Sending error to client
+    });
 });
 
 app.listen(process.env.PORT);
