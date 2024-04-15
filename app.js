@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const app = express();
 const cors = require("cors");
@@ -22,9 +23,7 @@ let transporter = nodemailer.createTransport({
 
 // DB Connection
 mongoose
-  .connect(
-    "mongodb+srv://admin01:Geralt_091@cluster0.eb3zmm7.mongodb.net/mydummyticket?retryWrites=true&w=majority"
-  )
+  .connect(process.env.DB_URL)
   .then((success) => console.log(`Connected to MonogDB successfully`))
   .catch((error) => console.log(`Error connecting to MongoDB ${error}`));
 
@@ -78,6 +77,4 @@ app.post("/", (req, res) => {
     .catch((error) => console.log("Error deleting data"));
 });
 
-app.listen(3001, () => {
-  console.log("App running on localhost:3001");
-});
+app.listen(process.env.PORT);
