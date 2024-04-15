@@ -50,7 +50,7 @@ app.post("/", (req, res) => {
 
       // Send email
       let mailOptions = {
-        from: process.env.FRONTEND_URL,
+        from: process.env.SENDER_EMAIL,
         to: "info@citytours.ae",
         subject: `New Form Submitted On MyDummyTicket.ae`,
         text: `${
@@ -65,20 +65,14 @@ app.post("/", (req, res) => {
         if (error) {
           console.error("Error occurred:", error.message);
           return;
+        } else {
+          console.log("Email sent successfully!");
         }
-        console.log("Email sent successfully!");
       });
     })
     .catch((error) => console.log(`Error sending data to DB ${error}`));
 
-  console.log(formData);
   res.send("Received the data successfully");
-
-  FormModel.remove({}, callback)
-    .then((success) => {
-      console.log("Data erased successfully");
-    })
-    .catch((error) => console.log("Error deleting data"));
 });
 
 app.listen(process.env.PORT);
