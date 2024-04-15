@@ -11,5 +11,12 @@
       "src": "/(.*)",
       "dest": "/"
     }
-  ]
+  ],
+  "env": {
+    "MY_BACKEND_URL": "https://my-dummy-ticket-backend.vercel.app"
+  },
+  "cors": {
+    "origin": "https://my-dummy-ticket.vercel.app",
+    "methods": ["GET", "POST", "PUT", "DELETE"]
+  }
 }
