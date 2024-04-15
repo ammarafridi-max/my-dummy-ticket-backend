@@ -22,16 +22,16 @@ app.use((req, res, next) => {
 let transporter = nodemailer.createTransport({
   service: "Gmail",
   auth: {
-    user: "ammar.afridi95@gmail.com",
-    pass: "gqhi eyuf bskv tdzc",
+    user: process.env.SENDER_EMAIL,
+    pass: process.env.SENDER_EMAIL_PASSWORD,
   },
 });
 
 // DB Connection
 mongoose
   .connect(process.env.DB_URL)
-  .then((success) => console.log(`Connected to MonogDB successfully`))
-  .catch((error) => console.log(`Error connecting to MongoDB ${error}`));
+  .then(() => console.log(`Connected to MonogDB successfully`))
+  .catch(() => console.log(`Error connecting to MongoDB ${error}`));
 
 // Routes
 app.post("/", (req, res) => {
