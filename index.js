@@ -37,7 +37,7 @@ app.post("/", (req, res) => {
     firstName: req.body.firstName,
     lastName: req.body.lastName,
     email: req.body.email,
-    phoneNumber: req.body.phoneNumber,
+    phoneNumber: req.body.number,
     from: req.body.from,
     to: req.body.to,
     departureDate: req.body.departureDate,
