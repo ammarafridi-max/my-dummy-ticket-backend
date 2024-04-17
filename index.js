@@ -37,7 +37,7 @@ app.post("/", (req, res) => {
     firstName: req.body.firstName,
     lastName: req.body.lastName,
     email: req.body.email,
-    phoneNumber: req.body.number,
+    phoneNumber: req.body.phoneNumber,
     from: req.body.from,
     to: req.body.to,
     departureDate: req.body.departureDate,
@@ -57,7 +57,7 @@ app.post("/", (req, res) => {
           formData.firstName + " " + formData.lastName
         } needs a dummy ticket from ${formData.from} to ${
           formData.to
-        }. Phone number is ${formData.number} and email address is ${
+        }. Phone number is ${formData.phoneNumber} and email address is ${
           formData.email
         }`,
       };
