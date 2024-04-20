@@ -16,6 +16,16 @@ app.use(
   })
 );
 
+app.options("*", (req, res) => {
+  res.setHeader(
+    "Access-Control-Allow-Origin",
+    process.env.FRONTEND_URL.replace(/\/$/, "")
+  );
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.sendStatus(200);
+});
+
 // Nodemailer
 let transporter = nodemailer.createTransport({
   service: "Gmail",
