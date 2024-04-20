@@ -42,6 +42,7 @@ app.post("/", (req, res) => {
     to: req.body.to,
     departureDate: req.body.departureDate,
     arrivalDate: req.body.arrivalDate,
+    passport: req.body.passport,
   };
 
   FormModel.create(formData)
@@ -57,6 +58,10 @@ app.post("/", (req, res) => {
           formData.firstName + " " + formData.lastName
         } needs a dummy ticket from ${formData.from} to ${
           formData.to
+        }. Departure date is ${formData.departureDate} and return date is ${
+          formData.arrivalDate
+        }. Passport copy can be found at ${
+          formData.passport
         }. Phone number is ${formData.phoneNumber} and email address is ${
           formData.email
         }`,

@@ -9,6 +9,7 @@ const FormSchema = mongoose.Schema({
   to: { type: String },
   departureDate: { type: String },
   arrivalDate: { type: String },
+  passport: { type: String },
 });
 
 const FormModel = mongoose.model("form", FormSchema);
