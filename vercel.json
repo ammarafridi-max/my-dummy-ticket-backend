@@ -16,7 +16,7 @@
     "MY_BACKEND_URL": "https://my-dummy-ticket-backend.vercel.app",
     "SENDER_EMAIL": "ammar.afridi95@gmail.com",
     "SENDER_EMAIL_PASSWORD": "gqhi eyuf bskv tdzc",
-    "FRONTEND_URL": "https://mydummyticket.ae",
+    "FRONTEND_URL": "https://my-dummy-ticket.vercel.app/",
     "DB_URL": "mongodb+srv://admin01:Geralt_091@cluster0.eb3zmm7.mongodb.net/mydummyticket?retryWrites=true&w=majority"
   }
 }
