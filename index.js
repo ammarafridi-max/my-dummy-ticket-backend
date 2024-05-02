@@ -52,7 +52,6 @@ app.post("/", (req, res) => {
     to: req.body.to,
     departureDate: req.body.departureDate,
     arrivalDate: req.body.arrivalDate,
-    passport: req.body.passport,
   };
 
   FormModel.create(formData)
@@ -64,16 +63,17 @@ app.post("/", (req, res) => {
         from: process.env.SENDER_EMAIL,
         to: "info@citytours.ae",
         subject: `New Form Submitted On MyDummyTicket.ae`,
-        text: `${
+        html: `<strong>Name:</strong> ${
           formData.firstName + " " + formData.lastName
-        } needs a dummy ticket from ${formData.from} to ${
+        }; <strong>Phone Number:</strong> ${
+          formData.phoneNumber
+        }; <strong>Email:</strong> ${formData.email}; <strong>From:</strong> ${
+          formData.from
+        }; <strong>To:</strong> ${
           formData.to
-        }. Departure date is ${formData.departureDate} and return date is ${
-          formData.arrivalDate
-        }. Passport copy can be found at ${
-          formData.passport
-        }. Phone number is ${formData.phoneNumber} and email address is ${
-          formData.email
+        }; <strong>Departing on:</strong> ${formData.departureDate}; ${
+          formData.arrivalDate &&
+          `<strong>Departing on:</strong> ${formData.arrivalDate}`
         }`,
       };
       transporter.sendMail(mailOptions, (error, info) => {
