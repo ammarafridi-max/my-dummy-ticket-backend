@@ -65,15 +65,15 @@ app.post("/", (req, res) => {
         subject: `New Form Submitted On MyDummyTicket.ae`,
         html: `<strong>Name:</strong> ${
           formData.firstName + " " + formData.lastName
-        }; <strong>Phone Number:</strong> ${
+        }; <br><strong>Phone Number:</strong> ${
           formData.phoneNumber
-        }; <strong>Email:</strong> ${formData.email}; <strong>From:</strong> ${
-          formData.from
-        }; <strong>To:</strong> ${
+        }; <br><strong>Email:</strong> ${
+          formData.email
+        }; <strong>From:</strong> ${formData.from}; <br><strong>To:</strong> ${
           formData.to
-        }; <strong>Departing on:</strong> ${formData.departureDate}; ${
+        }; <br><strong>Departing on:</strong> ${formData.departureDate}; ${
           formData.arrivalDate &&
-          `<strong>Departing on:</strong> ${formData.arrivalDate}`
+          `<br><strong>Departing on:</strong> ${formData.arrivalDate}`
         }`,
       };
       transporter.sendMail(mailOptions, (error, info) => {
