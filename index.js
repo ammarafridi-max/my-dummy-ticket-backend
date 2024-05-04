@@ -5,6 +5,7 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const nodemailer = require("nodemailer");
+const stripe = require("stripe")(process.env.STRIPE_API);
 const FormModel = require("./models/FormModel");
 
 // Middleware
@@ -15,7 +16,6 @@ app.use(
     origin: process.env.FRONTEND_URL.replace(/\/$/, ""),
   })
 );
-
 app.options("*", (req, res) => {
   res.setHeader(
     "Access-Control-Allow-Origin",
@@ -42,55 +42,82 @@ mongoose
   .catch((error) => console.log(`Error connecting to MongoDB ${error}`));
 
 // Routes
-app.post("/", (req, res) => {
-  const formData = {
-    firstName: req.body.firstName,
-    lastName: req.body.lastName,
-    email: req.body.email,
-    phoneNumber: req.body.number,
-    from: req.body.from,
-    to: req.body.to,
-    departureDate: req.body.departureDate,
-    arrivalDate: req.body.arrivalDate,
-  };
+app.post("/", async (req, res) => {
+  try {
+    // 1. Retrieve Data
+    const formData = {
+      ticketType: req.body.ticketType,
+      ticketId: req.body.ticketId,
+      firstName: req.body.firstName,
+      lastName: req.body.lastName,
+      email: req.body.email,
+      phoneNumber: req.body.number,
+      from: req.body.from,
+      to: req.body.to,
+      departureDate: req.body.departureDate,
+      arrivalDate: req.body.arrivalDate,
+    };
 
-  FormModel.create(formData)
-    .then((success) => {
-      console.log(`Data entered successfully: ${success}`);
+    // 2. Send data to database
+    await FormModel.create(formData);
 
-      // Send email
-      let mailOptions = {
-        from: process.env.SENDER_EMAIL,
-        to: "info@citytours.ae",
-        subject: `New Form Submitted On MyDummyTicket.ae`,
-        html: `<strong>Name:</strong> ${
-          formData.firstName + " " + formData.lastName
-        }; <br><strong>Phone Number:</strong> ${
-          formData.phoneNumber
-        }; <br><strong>Email:</strong> ${
-          formData.email
-        }; <strong>From:</strong> ${formData.from}; <br><strong>To:</strong> ${
-          formData.to
-        }; <br><strong>Departing on:</strong> ${formData.departureDate}; ${
-          formData.arrivalDate &&
-          `<br><strong>Departing on:</strong> ${formData.arrivalDate}`
-        }`,
-      };
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          console.error("Error occurred:", error.message);
-          res.status(500).send({ error: "Error sending email" }); // Sending error to client
-          return;
-        } else {
-          console.log("Email sent successfully!");
-          res.send("Email sent successfully!"); // Sending success message to client
-        }
-      });
-    })
-    .catch((error) => {
-      console.log(`Error sending data to DB ${error}`);
-      res.status(500).send({ error: "Error saving data to database" }); // Sending error to client
+    // 3. Send email
+    let mailOptions = {
+      from: process.env.SENDER_EMAIL,
+      to: "info@citytours.ae",
+      subject: `${
+        formData.firstName + " " + formData.lastName
+      } Submitted On MyDummyTicket.ae`,
+      html: `<strong>Name:</strong> ${
+        formData.firstName + " " + formData.lastName
+      }; <br><strong>Phone Number:</strong> ${
+        formData.phoneNumber
+      }; <br><strong>Email:</strong> ${
+        formData.email
+      }; <br><strong>From:</strong> ${
+        formData.from
+      }; <br><strong>To:</strong> ${
+        formData.to
+      }; <br><strong>Departing on:</strong> ${formData.departureDate}; ${
+        formData.arrivalDate &&
+        `<br><strong>Departing on:</strong> ${formData.arrivalDate}`
+      }`,
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error("Error occurred:", error.message);
+        res.status(500).send({ error: "Error sending email" }); // Sending error to client
+        return;
+      } else {
+        console.log("Email sent successfully!");
+        res.send("Email sent successfully!"); // Sending success message to client
+      }
     });
+
+    // 3. Stripe Checkout session
+    const session = await stripe.checkout.sessions.create({
+      line_items: [
+        {
+          price: formData.ticketId,
+          quantity: 1,
+        },
+      ],
+      mode: "payment",
+      success_url: `${process.env.FRONTEND_URL}?success=true`,
+      cancel_url: `${process.env.FRONTEND_URL}?canceled=true`,
+    });
+
+    // Send response to client
+    res.status(200).json({
+      sessionId: session.id,
+      clientSecret: session.client_secret,
+      url: session.url,
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "An unexpected error occurred" });
+  }
 });
 
 app.listen(process.env.PORT);
