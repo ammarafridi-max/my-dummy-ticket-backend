@@ -17,6 +17,7 @@
     "SENDER_EMAIL": "ammar.afridi95@gmail.com",
     "SENDER_EMAIL_PASSWORD": "gqhi eyuf bskv tdzc",
     "FRONTEND_URL": "https://my-dummy-ticket.vercel.app/",
-    "DB_URL": "mongodb+srv://admin01:Geralt_091@cluster0.eb3zmm7.mongodb.net/mydummyticket?retryWrites=true&w=majority"
+    "DB_URL": "mongodb+srv://admin01:Geralt_091@cluster0.eb3zmm7.mongodb.net/mydummyticket?retryWrites=true&w=majority",
+    "STRIPE_API": "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"
   }
 }
