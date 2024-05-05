@@ -59,47 +59,7 @@ app.post("/", async (req, res) => {
       quantity: req.body.quantity,
     };
 
-    // 2. Send data to database.
-    await FormModel.create(formData);
-
-    // 3. Send email
-    let mailOptions = {
-      from: process.env.SENDER_EMAIL,
-      to: "info@citytours.ae",
-
-      subject: `${
-        formData.firstName + " " + formData.lastName
-      } Submitted a Form On MyDummyTicket.ae`,
-
-      html: `<p style="font-size:20px"><strong>Name:</strong> ${
-        formData.firstName + " " + formData.lastName
-      }; <br><strong>Number of Tickets:</strong> ${formData.quantity};
-      <br><strong>Phone Number:</strong> ${
-        formData.phoneNumber
-      }; <br><strong>Email:</strong> ${
-        formData.email
-      }; <br><strong>From:</strong> ${
-        formData.from
-      }; <br><strong>To:</strong> ${
-        formData.to
-      }; <br><strong>Departing on:</strong> ${formData.departureDate}; ${
-        formData.arrivalDate &&
-        `<br><strong>Departing on:</strong> ${formData.arrivalDate}`
-      }</p>`,
-    };
-
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error("Error occurred:", error.message);
-        res.status(500).send({ error: "Error sending email" }); // Sending error to client
-        return;
-      } else {
-        console.log("Email sent successfully!");
-        res.send("Email sent successfully!"); // Sending success message to client
-      }
-    });
-
-    // 3. Stripe Checkout sessio
+    // 2. Stripe Checkout session
     const session = await stripe.checkout.sessions.create({
       line_items: [
         {
@@ -112,11 +72,49 @@ app.post("/", async (req, res) => {
       cancel_url: `${process.env.FRONTEND_URL}?canceled=true`,
     });
 
-    // Send response to client
+    // 3. Send response to client
     res.status(200).json({
       sessionId: session.id,
       clientSecret: session.client_secret,
       url: session.url,
+    });
+
+    // Success callback for Stripe Checkout session
+    session.then(async (result) => {
+      // 4. Send data to database.
+      await FormModel.create(formData);
+
+      // 5. Send email
+      let mailOptions = {
+        from: process.env.SENDER_EMAIL,
+        to: "info@citytours.ae",
+        subject: `${
+          formData.firstName + " " + formData.lastName
+        } Submitted a Form On MyDummyTicket.ae`,
+        html: `<p style="font-size:20px"><strong>Name:</strong> ${
+          formData.firstName + " " + formData.lastName
+        }; <br><strong>Number of Tickets:</strong> ${formData.quantity};
+        <br><strong>Phone Number:</strong> ${
+          formData.phoneNumber
+        }; <br><strong>Email:</strong> ${
+          formData.email
+        }; <br><strong>From:</strong> ${
+          formData.from
+        }; <br><strong>To:</strong> ${
+          formData.to
+        }; <br><strong>Departing on:</strong> ${formData.departureDate}; ${
+          formData.arrivalDate &&
+          `<br><strong>Departing on:</strong> ${formData.arrivalDate}`
+        }</p>`,
+      };
+
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error("Error occurred:", error.message);
+          return;
+        }
+        console.log("Email sent successfully!");
+      });
     });
   } catch (error) {
     console.error("Error:", error);
