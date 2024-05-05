@@ -104,7 +104,7 @@ app.post("/", async (req, res) => {
       line_items: [
         {
           price: formData.ticketId,
-          quantity,
+          quantity: 1,
         },
       ],
       mode: "payment",
