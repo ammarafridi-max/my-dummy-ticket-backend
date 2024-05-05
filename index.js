@@ -67,7 +67,7 @@ app.post("/", async (req, res) => {
           adjustable_quantity: {
             enabled: true,
           },
-          quantity: quantity,
+          quantity: formData.quantity,
         },
       ],
       mode: "payment",
