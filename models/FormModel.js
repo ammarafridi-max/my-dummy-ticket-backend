@@ -11,6 +11,7 @@ const FormSchema = mongoose.Schema({
   to: { type: String },
   departureDate: { type: String },
   arrivalDate: { type: String },
+  quanity: { type: Number },
 });
 
 const FormModel = mongoose.model("form", FormSchema);

@@ -56,6 +56,7 @@ app.post("/", async (req, res) => {
       to: req.body.to,
       departureDate: req.body.departureDate,
       arrivalDate: req.body.arrivalDate,
+      quantity: req.body.quantity,
     };
 
     // 2. Send data to database.
@@ -65,10 +66,12 @@ app.post("/", async (req, res) => {
     let mailOptions = {
       from: process.env.SENDER_EMAIL,
       to: "info@citytours.ae",
+
       subject: `${
         formData.firstName + " " + formData.lastName
-      } Submitted On MyDummyTicket.ae`,
-      html: `<strong>Name:</strong> ${
+      } Submitted a Form On MyDummyTicket.ae`,
+
+      html: `<p style="font-size:20px"><strong>Name:</strong> ${
         formData.firstName + " " + formData.lastName
       }; <br><strong>Phone Number:</strong> ${
         formData.phoneNumber
@@ -81,7 +84,7 @@ app.post("/", async (req, res) => {
       }; <br><strong>Departing on:</strong> ${formData.departureDate}; ${
         formData.arrivalDate &&
         `<br><strong>Departing on:</strong> ${formData.arrivalDate}`
-      }`,
+      }</p>`,
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
@@ -100,7 +103,7 @@ app.post("/", async (req, res) => {
       line_items: [
         {
           price: formData.ticketId,
-          quantity: 1,
+          quantity: quantity,
         },
       ],
       mode: "payment",
