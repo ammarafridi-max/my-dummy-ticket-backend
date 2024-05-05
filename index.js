@@ -73,7 +73,8 @@ app.post("/", async (req, res) => {
 
       html: `<p style="font-size:20px"><strong>Name:</strong> ${
         formData.firstName + " " + formData.lastName
-      }; <br><strong>Phone Number:</strong> ${
+      }; <br><strong>Number of Tickets:</strong> ${formData.quantity};
+      <br><strong>Phone Number:</strong> ${
         formData.phoneNumber
       }; <br><strong>Email:</strong> ${
         formData.email
@@ -103,7 +104,7 @@ app.post("/", async (req, res) => {
       line_items: [
         {
           price: formData.ticketId,
-          quantity: 1,
+          quantity: 2,
         },
       ],
       mode: "payment",
