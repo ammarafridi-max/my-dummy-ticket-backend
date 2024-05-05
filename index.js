@@ -58,7 +58,7 @@ app.post("/", async (req, res) => {
       arrivalDate: req.body.arrivalDate,
     };
 
-    // 2. Send data to database
+    // 2. Send data to database.
     await FormModel.create(formData);
 
     // 3. Send email
