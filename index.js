@@ -16,7 +16,15 @@ app.use(
     origin: process.env.FRONTEND_URL.replace(/\/$/, ""),
   })
 );
-app.options("*", cors());
+app.options("*", (req, res) => {
+  res.setHeader(
+    "Access-Control-Allow-Origin",
+    process.env.FRONTEND_URL.replace(/\/$/, "")
+  );
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.sendStatus(200);
+});
 
 // Nodemailer
 let transporter = nodemailer.createTransport({
@@ -49,17 +57,55 @@ app.post("/", async (req, res) => {
       to: req.body.to,
       departureDate: req.body.departureDate,
       arrivalDate: req.body.arrivalDate,
+      quantity: req.body.quantity,
     };
 
     // 2. Send data to database.
     await FormModel.create(formData);
 
-    // 3. Stripe Checkout session
+    // 3. Send email
+    let mailOptions = {
+      from: process.env.SENDER_EMAIL,
+      to: "info@citytours.ae",
+
+      subject: `${
+        formData.firstName + " " + formData.lastName
+      } Submitted a Form On MyDummyTicket.ae`,
+
+      html: `<p style="font-size:20px"><strong>Name:</strong> ${
+        formData.firstName + " " + formData.lastName
+      }; <br><strong>Number of Tickets:</strong> ${formData.quantity};
+      <br><strong>Phone Number:</strong> ${
+        formData.phoneNumber
+      }; <br><strong>Email:</strong> ${
+        formData.email
+      }; <br><strong>From:</strong> ${
+        formData.from
+      }; <br><strong>To:</strong> ${
+        formData.to
+      }; <br><strong>Departing on:</strong> ${formData.departureDate}; ${
+        formData.arrivalDate &&
+        `<br><strong>Departing on:</strong> ${formData.arrivalDate}`
+      }</p>`,
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error("Error occurred:", error.message);
+        res.status(500).send({ error: "Error sending email" }); // Sending error to client
+        return;
+      } else {
+        console.log("Email sent successfully!");
+        res.send("Email sent successfully!"); // Sending success message to client
+      }
+    });
+
+    // 3. Stripe Checkout sessio
     const session = await stripe.checkout.sessions.create({
       line_items: [
         {
           price: formData.ticketId,
-          quantity: 1,
+          quantity: 2,
         },
       ],
       mode: "payment",
@@ -67,48 +113,16 @@ app.post("/", async (req, res) => {
       cancel_url: `${process.env.FRONTEND_URL}?canceled=true`,
     });
 
-    // 4. Send response to client
+    // Send response to client
     res.status(200).json({
       sessionId: session.id,
       clientSecret: session.client_secret,
       url: session.url,
-    });
-
-    // 5. Send email only if payment is successful
-    session.on("payment_intent.succeeded", async (event) => {
-      let mailOptions = {
-        from: process.env.SENDER_EMAIL,
-        to: "info@citytours.ae",
-        subject: `${
-          formData.firstName + " " + formData.lastName
-        } Submitted On MyDummyTicket.ae`,
-        html: `<p style="font-size:20px"><strong>Name:</strong> ${
-          formData.firstName + " " + formData.lastName
-        }; <br><strong>Phone Number:</strong> ${
-          formData.phoneNumber
-        }; <br><strong>Email:</strong> ${
-          formData.email
-        }; <br><strong>From:</strong> ${
-          formData.from
-        }; <br><strong>To:</strong> ${
-          formData.to
-        }; <br><strong>Departing on:</strong> ${formData.departureDate}; ${
-          formData.arrivalDate &&
-          `<br><strong>Departing on:</strong> ${formData.arrivalDate}`
-        }</p>`,
-      };
-
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          console.error("Error occurred:", error.message);
-          return;
-        } else {
-          console.log("Email sent successfully!");
-        }
-      });
     });
   } catch (error) {
     console.error("Error:", error);
     res.status(500).json({ error: "An unexpected error occurred" });
   }
 });
+
+app.listen(process.env.PORT);
