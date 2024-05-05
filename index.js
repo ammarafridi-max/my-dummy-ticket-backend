@@ -42,7 +42,6 @@ mongoose
   .catch((error) => console.log(`Error connecting to MongoDB ${error}`));
 
 // Routes
-
 app.post("/", async (req, res) => {
   try {
     // 1. Retrieve Data
@@ -105,12 +104,7 @@ app.post("/", async (req, res) => {
       line_items: [
         {
           price: formData.ticketId,
-          adjustable_quantity: {
-            enabled: true,
-            minimum: 1,
-            maximum: 12,
-          },
-          quantity: quantity,
+          quantity,
         },
       ],
       mode: "payment",
