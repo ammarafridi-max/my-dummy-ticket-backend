@@ -105,7 +105,12 @@ app.post("/", async (req, res) => {
       line_items: [
         {
           price: formData.ticketId,
-          quantity: 2,
+          adjustable_quantity: {
+            enabled: true,
+            minimum: 1,
+            maximum: 12,
+          },
+          quantity: quantity,
         },
       ],
       mode: "payment",
