@@ -98,7 +98,7 @@ app.post("/", async (req, res) => {
       }
     });
 
-    // 3. Stripe Checkout session
+    // 3. Stripe Checkout sessio
     const session = await stripe.checkout.sessions.create({
       line_items: [
         {
