@@ -64,9 +64,6 @@ app.post("/", async (req, res) => {
       line_items: [
         {
           price: formData.ticketId,
-          adjustable_quantity: {
-            enabled: true,
-          },
           quantity: formData.quantity,
         },
       ],
