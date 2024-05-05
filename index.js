@@ -16,15 +16,7 @@ app.use(
     origin: process.env.FRONTEND_URL.replace(/\/$/, ""),
   })
 );
-app.options("*", (req, res) => {
-  res.setHeader(
-    "Access-Control-Allow-Origin",
-    process.env.FRONTEND_URL.replace(/\/$/, "")
-  );
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  res.sendStatus(200);
-});
+app.options("*", cors());
 
 // Nodemailer
 let transporter = nodemailer.createTransport({
@@ -59,7 +51,10 @@ app.post("/", async (req, res) => {
       arrivalDate: req.body.arrivalDate,
     };
 
-    // 2. Stripe Checkout session
+    // 2. Send data to database.
+    await FormModel.create(formData);
+
+    // 3. Stripe Checkout session
     const session = await stripe.checkout.sessions.create({
       line_items: [
         {
@@ -72,30 +67,24 @@ app.post("/", async (req, res) => {
       cancel_url: `${process.env.FRONTEND_URL}?canceled=true`,
     });
 
-    // 3. Send response to client
+    // 4. Send response to client
     res.status(200).json({
       sessionId: session.id,
       clientSecret: session.client_secret,
       url: session.url,
     });
 
+    // 5. Send email only if payment is successful
     session.on("payment_intent.succeeded", async (event) => {
-      // 4. Send data to database on payment.
-      await FormModel.create(formData);
-
-      // 5. Send email to use
       let mailOptions = {
         from: process.env.SENDER_EMAIL,
         to: "info@citytours.ae",
-
         subject: `${
           formData.firstName + " " + formData.lastName
-        } Submitted a Form On MyDummyTicket.ae`,
-
+        } Submitted On MyDummyTicket.ae`,
         html: `<p style="font-size:20px"><strong>Name:</strong> ${
           formData.firstName + " " + formData.lastName
-        }; <br><strong>Number of Tickets:</strong> ${formData.quantity};
-        <br><strong>Phone Number:</strong> ${
+        }; <br><strong>Phone Number:</strong> ${
           formData.phoneNumber
         }; <br><strong>Email:</strong> ${
           formData.email
@@ -112,11 +101,9 @@ app.post("/", async (req, res) => {
       transporter.sendMail(mailOptions, (error, info) => {
         if (error) {
           console.error("Error occurred:", error.message);
-          res.status(500).send({ error: "Error sending email" }); // Sending error to client
           return;
         } else {
           console.log("Email sent successfully!");
-          res.send("Email sent successfully!"); // Sending success message to client
         }
       });
     });
