@@ -69,7 +69,7 @@ app.post("/", async (req, res) => {
       ],
       mode: "payment",
       success_url: `${process.env.FRONTEND_URL}?success=true`,
-      cancel_url: `${process.env.FRONTEND_URL}?canceled=true`,
+      cancel_url: `${process.env.FRONTEND_URL}`,
     });
 
     // 3. Send response to client
