@@ -47,6 +47,7 @@ app.post("/", async (req, res) => {
     // 1. Retrieve Data
     const formData = {
       ticketType: req.body.ticketType,
+      ticketId: req.body.ticketId,
       firstName: req.body.firstName,
       lastName: req.body.lastName,
       email: req.body.email,
@@ -56,7 +57,6 @@ app.post("/", async (req, res) => {
       departureDate: req.body.departureDate,
       arrivalDate: req.body.arrivalDate,
       quantity: req.body.quantity,
-      price: req.body.price,
       message: req.body.message,
     };
 
@@ -64,13 +64,7 @@ app.post("/", async (req, res) => {
     const session = await stripe.checkout.sessions.create({
       line_items: [
         {
-          price_data: {
-            currency: "aed",
-            product_data: {
-              name: formData.ticketType,
-            },
-            unit_amount: formData.price,
-          },
+          price: formData.ticketId,
           quantity: formData.quantity,
         },
       ],
