@@ -70,7 +70,6 @@ app.post("/", async (req, res) => {
               name: formData.ticketType,
             },
             unit_amount: formData.price,
-            tax_behavior: "exclusive",
           },
           quantity: formData.quantity,
         },
