@@ -47,7 +47,6 @@ app.post("/", async (req, res) => {
     // 1. Retrieve Data
     const formData = {
       ticketType: req.body.ticketType,
-      ticketId: req.body.ticketId,
       firstName: req.body.firstName,
       lastName: req.body.lastName,
       email: req.body.email,
@@ -57,13 +56,22 @@ app.post("/", async (req, res) => {
       departureDate: req.body.departureDate,
       arrivalDate: req.body.arrivalDate,
       quantity: req.body.quantity,
+      price: req.body.price,
+      message: req.body.message,
     };
 
     // 2. Stripe Checkout session
     const session = await stripe.checkout.sessions.create({
       line_items: [
         {
-          price: formData.ticketId,
+          price_data: {
+            currency: "aed",
+            product_data: {
+              name: formData.ticketType,
+            },
+            unit_amount: formData.price,
+            tax_behavior: "exclusive",
+          },
           quantity: formData.quantity,
         },
       ],
@@ -91,21 +99,23 @@ app.post("/", async (req, res) => {
         subject: `${
           formData.firstName + " " + formData.lastName
         } Submitted a Form On MyDummyTicket.ae`,
-        html: `<p style="font-size:20px"><strong>Name:</strong> ${
+        html: `<p style="font-size:20px"><strong>Type:</strong>: ${
+          formData.ticketType
+        }<br><strong>Name:</strong> ${
           formData.firstName + " " + formData.lastName
-        }; <br><strong>Number of Tickets:</strong> ${formData.quantity};
+        } <br><strong>Number of Tickets:</strong> ${formData.quantity};
         <br><strong>Phone Number:</strong> ${
           formData.phoneNumber
-        }; <br><strong>Email:</strong> ${
+        } <br><strong>Email:</strong> ${
           formData.email
-        }; <br><strong>From:</strong> ${
+        } <br><strong>From:</strong> ${
           formData.from
-        }; <br><strong>To:</strong> ${
+        } <br><strong>To:</strong> ${
           formData.to
-        }; <br><strong>Departing on:</strong> ${formData.departureDate}; ${
+        } <br><strong>Departing on:</strong> ${formData.departureDate}; ${
           formData.arrivalDate &&
           `<br><strong>Departing on:</strong> ${formData.arrivalDate}`
-        }</p>`,
+        } <br><strong>Message:</strong> ${formData.message} </p>`,
       };
 
       transporter.sendMail(mailOptions, (error, info) => {
