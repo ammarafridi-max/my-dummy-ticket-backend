@@ -42,7 +42,7 @@ mongoose
   .catch((error) => console.log(`Error connecting to MongoDB ${error}`));
 
 // Routes
-app.post("/ticket", async (req, res) => {
+app.post("/", async (req, res) => {
   try {
     // 1. Retrieve Data
     const formData = {
