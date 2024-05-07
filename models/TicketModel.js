@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const FormSchema = mongoose.Schema({
+const TicketSchema = mongoose.Schema({
   ticketType: { type: String },
   ticketId: { type: String },
   firstName: { type: String, required: true },
@@ -15,6 +15,6 @@ const FormSchema = mongoose.Schema({
   message: { type: String },
 });
 
-const FormModel = mongoose.model("form", FormSchema);
+const TicketModel = mongoose.model("form", TicketSchema);
 
-module.exports = FormModel;
+module.exports = TicketModel;

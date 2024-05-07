@@ -6,7 +6,7 @@ const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const nodemailer = require("nodemailer");
 const stripe = require("stripe")(process.env.STRIPE_API);
-const FormModel = require("./models/FormModel");
+const TicketModel = require("./models/TicketModel");
 
 // Middleware
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -42,7 +42,7 @@ mongoose
   .catch((error) => console.log(`Error connecting to MongoDB ${error}`));
 
 // Routes
-app.post("/", async (req, res) => {
+app.post("/ticket", async (req, res) => {
   try {
     // 1. Retrieve Data
     const formData = {
@@ -59,6 +59,38 @@ app.post("/", async (req, res) => {
       quantity: req.body.quantity,
       message: req.body.message,
     };
+
+    // 5. Send email
+    let mailOptions = {
+      from: process.env.SENDER_EMAIL,
+      to: "info@citytours.ae",
+      subject: `${
+        formData.firstName + " " + formData.lastName
+      } Submitted a Form On MyDummyTicket.ae`,
+      html: `<p style="font-size:20px"><strong>Type:</strong>: ${
+        formData.ticketType
+      }<br><strong>Name:</strong> ${
+        formData.firstName + " " + formData.lastName
+      } <br><strong>Number of Tickets:</strong> ${formData.quantity};
+      <br><strong>Phone Number:</strong> ${
+        formData.phoneNumber
+      } <br><strong>Email:</strong> ${
+        formData.email
+      } <br><strong>From:</strong> ${formData.from} <br><strong>To:</strong> ${
+        formData.to
+      } <br><strong>Departing on:</strong> ${formData.departureDate}; ${
+        formData.arrivalDate &&
+        `<br><strong>Departing on:</strong> ${formData.arrivalDate}`
+      } <br><strong>Message:</strong> ${formData.message} </p>`,
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error("Error occurred:", error.message);
+        return;
+      }
+      console.log("Email sent successfully!");
+    });
 
     // 2. Stripe Checkout session
     const session = await stripe.checkout.sessions.create({
@@ -80,45 +112,45 @@ app.post("/", async (req, res) => {
       url: session.url,
     });
 
-    // Success callback for Stripe Checkout session
-    session.then(async (result) => {
-      // 4. Send data to database.
-      await FormModel.create(formData);
+    // // Success callback for Stripe Checkout session
+    // session.then(async (result) => {
+    //   // 4. Send data to database.
+    //   await TicketModel.create(formData);
 
-      // 5. Send email
-      let mailOptions = {
-        from: process.env.SENDER_EMAIL,
-        to: "info@citytours.ae",
-        subject: `${
-          formData.firstName + " " + formData.lastName
-        } Submitted a Form On MyDummyTicket.ae`,
-        html: `<p style="font-size:20px"><strong>Type:</strong>: ${
-          formData.ticketType
-        }<br><strong>Name:</strong> ${
-          formData.firstName + " " + formData.lastName
-        } <br><strong>Number of Tickets:</strong> ${formData.quantity};
-        <br><strong>Phone Number:</strong> ${
-          formData.phoneNumber
-        } <br><strong>Email:</strong> ${
-          formData.email
-        } <br><strong>From:</strong> ${
-          formData.from
-        } <br><strong>To:</strong> ${
-          formData.to
-        } <br><strong>Departing on:</strong> ${formData.departureDate}; ${
-          formData.arrivalDate &&
-          `<br><strong>Departing on:</strong> ${formData.arrivalDate}`
-        } <br><strong>Message:</strong> ${formData.message} </p>`,
-      };
+    //   // 5. Send email
+    //   let mailOptions = {
+    //     from: process.env.SENDER_EMAIL,
+    //     to: "info@citytours.ae",
+    //     subject: `${
+    //       formData.firstName + " " + formData.lastName
+    //     } Submitted a Form On MyDummyTicket.ae`,
+    //     html: `<p style="font-size:20px"><strong>Type:</strong>: ${
+    //       formData.ticketType
+    //     }<br><strong>Name:</strong> ${
+    //       formData.firstName + " " + formData.lastName
+    //     } <br><strong>Number of Tickets:</strong> ${formData.quantity};
+    //     <br><strong>Phone Number:</strong> ${
+    //       formData.phoneNumber
+    //     } <br><strong>Email:</strong> ${
+    //       formData.email
+    //     } <br><strong>From:</strong> ${
+    //       formData.from
+    //     } <br><strong>To:</strong> ${
+    //       formData.to
+    //     } <br><strong>Departing on:</strong> ${formData.departureDate}; ${
+    //       formData.arrivalDate &&
+    //       `<br><strong>Departing on:</strong> ${formData.arrivalDate}`
+    //     } <br><strong>Message:</strong> ${formData.message} </p>`,
+    //   };
 
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          console.error("Error occurred:", error.message);
-          return;
-        }
-        console.log("Email sent successfully!");
-      });
-    });
+    //   transporter.sendMail(mailOptions, (error, info) => {
+    //     if (error) {
+    //       console.error("Error occurred:", error.message);
+    //       return;
+    //     }
+    //     console.log("Email sent successfully!");
+    //   });
+    // });
   } catch (error) {
     console.error("Error:", error);
     res.status(500).json({ error: "An unexpected error occurred" });
