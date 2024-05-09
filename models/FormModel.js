@@ -3,15 +3,14 @@ const mongoose = require("mongoose");
 const FormSchema = mongoose.Schema({
   ticketType: { type: String },
   ticketId: { type: String },
-  firstName: { type: String, required: true },
-  lastName: { type: String, required: true },
+  passengers: { type: Array },
   email: { type: String, required: true },
   phoneNumber: { type: String, required: true },
   from: { type: String },
   to: { type: String },
   departureDate: { type: String },
   arrivalDate: { type: String },
-  quanity: { type: Number },
+  quantity: { type: Number },
   message: { type: String },
 });
 
