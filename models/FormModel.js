@@ -1,8 +1,8 @@
 const mongoose = require("mongoose");
 
 const FormSchema = mongoose.Schema({
-  ticketType: { type: String },
-  ticketId: { type: String },
+  type: { type: String },
+  price: { type: Number },
   passengers: { type: Array },
   email: { type: String, required: true },
   phoneNumber: { type: String, required: true },

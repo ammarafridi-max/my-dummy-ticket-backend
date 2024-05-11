@@ -14,12 +14,12 @@ let transporter = nodemailer.createTransport({
   },
 });
 
-router.post("/", async (req, res) => {
+router.post("/ticket", async (req, res) => {
   try {
     // 1. Retrieve Data
     const formData = {
-      ticketType: req.body.ticketType,
-      ticketId: req.body.ticketId,
+      type: req.body.type,
+      price: req.body.price * 100,
       passengers: req.body.passengers,
       email: req.body.email,
       phoneNumber: req.body.number,
@@ -36,7 +36,13 @@ router.post("/", async (req, res) => {
       {
         line_items: [
           {
-            price: formData.ticketId,
+            price_data: {
+              unit_amount: formData.price,
+              currency: "aed",
+              product_data: {
+                name: formData.type,
+              },
+            },
             quantity: formData.quantity,
           },
         ],
@@ -63,7 +69,7 @@ router.post("/", async (req, res) => {
           // 4. Send data to database.
           await FormModel.create(formData);
 
-          // 5. Send email
+          // // 5. Send email
           let mailOptions = {
             from: process.env.SENDER_EMAIL,
             to: "info@citytours.ae",
@@ -90,11 +96,8 @@ router.post("/", async (req, res) => {
               formData.to
             } <br><strong>Departing on:</strong> ${formData.departureDate}; ${
               formData.arrivalDate &&
-              ` <br><strong>Departing on:</strong> ${formData.arrivalDate}`
-            } <br>${
-              formData.message &&
-              `<strong>Message:</strong> ${formData.message}`
-            } </p>`,
+              ` <br><strong>Returning on:</strong> ${formData.arrivalDate}`
+            } <br><strong>Message:</strong>${formData.message} </p>`,
           };
 
           transporter.sendMail(mailOptions, (error, info) => {
