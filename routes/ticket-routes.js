@@ -31,7 +31,45 @@ router.post("/ticket", async (req, res) => {
       message: req.body.message,
     };
 
-    // 2. Stripe Checkout session
+    // 2. Send data to database.
+    await FormModel.create(formData);
+
+    // 3. Send email
+    let mailOptions = {
+      from: process.env.SENDER_EMAIL,
+      to: "info@citytours.ae",
+      subject: `${
+        formData.passengers[0].firstName + " " + formData.passengers[0].lastName
+      } Submitted a Form On MyDummyTicket.ae`,
+      html: `<p><strong>Type:</strong> ${
+        formData.type
+      }<br> ${formData.passengers.map((passenger, index) => {
+        return ` <strong>Passenger ${index + 1}:</strong> ${passenger.title} ${
+          passenger.firstName
+        } ${passenger.lastName}<br> `;
+      })}<strong>Number of Tickets:</strong> ${
+        formData.quantity
+      }; <br><strong>Phone Number:</strong> ${
+        formData.phoneNumber
+      } <br><strong>Email:</strong> ${
+        formData.email
+      } <br><strong>From:</strong> ${formData.from} <br><strong>To:</strong> ${
+        formData.to
+      } <br><strong>Departing on:</strong> ${formData.departureDate}; ${
+        formData.arrivalDate &&
+        ` <br><strong>Returning on:</strong> ${formData.arrivalDate}`
+      } <br><strong>Message:</strong>${formData.message} </p>`,
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error("Error occurred:", error.message);
+        return;
+      }
+      console.log("Email sent successfully!");
+    });
+
+    // 4. Stripe Checkout session
     const session = await stripe.checkout.sessions.create(
       {
         line_items: [
@@ -59,53 +97,11 @@ router.post("/ticket", async (req, res) => {
         }
 
         try {
-          // 3. Send response to client
+          // 5. Send response to client
           res.status(200).json({
             sessionId: session.id,
             clientSecret: session.client_secret,
             url: session.url,
-          });
-
-          // 4. Send data to database.
-          await FormModel.create(formData);
-
-          // // 5. Send email
-          let mailOptions = {
-            from: process.env.SENDER_EMAIL,
-            to: "info@citytours.ae",
-            subject: `${
-              formData.passengers[0].firstName +
-              " " +
-              formData.passengers[0].lastName
-            } Submitted a Form On MyDummyTicket.ae`,
-            html: `<p><strong>Type:</strong> ${
-              formData.ticketType
-            }<br> ${formData.passengers.map((passenger, index) => {
-              return ` <strong>Passenger ${index + 1}:</strong> ${
-                passenger.title
-              } ${passenger.firstName} ${passenger.lastName}<br> `;
-            })}<strong>Number of Tickets:</strong> ${
-              formData.quantity
-            }; <br><strong>Phone Number:</strong> ${
-              formData.phoneNumber
-            } <br><strong>Email:</strong> ${
-              formData.email
-            } <br><strong>From:</strong> ${
-              formData.from
-            } <br><strong>To:</strong> ${
-              formData.to
-            } <br><strong>Departing on:</strong> ${formData.departureDate}; ${
-              formData.arrivalDate &&
-              ` <br><strong>Returning on:</strong> ${formData.arrivalDate}`
-            } <br><strong>Message:</strong>${formData.message} </p>`,
-          };
-
-          transporter.sendMail(mailOptions, (error, info) => {
-            if (error) {
-              console.error("Error occurred:", error.message);
-              return;
-            }
-            console.log("Email sent successfully!");
           });
         } catch (error) {
           console.error("Error:", error);
