@@ -5,7 +5,7 @@ const nodemailer = require("nodemailer");
 const stripe = require("stripe")(process.env.STRIPE_API);
 const FormModel = require("../models/FormModel");
 
-// Nodemailer
+// Nodemailer -
 let transporter = nodemailer.createTransport({
   service: "Gmail",
   auth: {
