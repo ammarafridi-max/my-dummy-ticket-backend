@@ -18,8 +18,12 @@ router.post("/ticket", async (req, res) => {
   try {
     // 1. Retrieve Data
     const formData = {
+      creation: {
+        date: req.body.creation.date,
+        time: new Date().toLocaleTimeString(),
+      },
       type: req.body.type,
-      price: req.body.price * 100,
+      price: req.body.price,
       passengers: req.body.passengers,
       email: req.body.email,
       phoneNumber: req.body.number,
@@ -30,6 +34,7 @@ router.post("/ticket", async (req, res) => {
       quantity: req.body.quantity,
       message: req.body.message,
     };
+    console.log(formData);
 
     // 2. Send data to database.
     await FormModel.create(formData);
@@ -75,7 +80,7 @@ router.post("/ticket", async (req, res) => {
         line_items: [
           {
             price_data: {
-              unit_amount: formData.price,
+              unit_amount: formData.price * 100,
               currency: "aed",
               product_data: {
                 name: formData.type,
@@ -111,6 +116,16 @@ router.post("/ticket", async (req, res) => {
   } catch (error) {
     console.error("Error:", error);
     res.status(500).json({ error: "An unexpected error occurred" });
+  }
+});
+
+router.get("/tickets", async (req, res) => {
+  try {
+    const data = await FormModel.find();
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 

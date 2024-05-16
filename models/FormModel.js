@@ -1,6 +1,10 @@
 const mongoose = require("mongoose");
 
 const FormSchema = mongoose.Schema({
+  creation: {
+    date: { type: String },
+    time: { type: String },
+  },
   type: { type: String },
   price: { type: Number },
   passengers: { type: Array },
