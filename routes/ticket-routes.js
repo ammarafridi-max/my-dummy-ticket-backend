@@ -43,24 +43,29 @@ router.post("/ticket", async (req, res) => {
     let mailOptions = {
       from: process.env.SENDER_EMAIL,
       to: "info@citytours.ae",
+
       subject: `${
         formData.passengers[0].firstName + " " + formData.passengers[0].lastName
       } Submitted a Form On MyDummyTicket.ae`,
-      html: `<p><strong>Type:</strong> ${
-        formData.type
-      }<br> ${formData.passengers.map((passenger, index) => {
-        return ` <strong>Passenger ${index + 1}:</strong> ${passenger.title} ${
-          passenger.firstName
-        } ${passenger.lastName}<br> `;
+
+      html: `
+      <p>
+      <strong>Type:</strong> ${formData.type}
+      <br><strong>Creation Time: </strong>${
+        formData.creation.time + " " + formData.creation.date
+      }<br>
+      ${formData.passengers.map((passenger, index) => {
+        return ` <strong>Passenger ${index + 1}:</strong>
+        ${passenger.title}
+        ${passenger.firstName}
+        ${passenger.lastName}<br>`;
       })}<strong>Number of Tickets:</strong> ${
         formData.quantity
-      }; <br><strong>Phone Number:</strong> ${
-        formData.phoneNumber
-      } <br><strong>Email:</strong> ${
-        formData.email
-      } <br><strong>From:</strong> ${formData.from} <br><strong>To:</strong> ${
-        formData.to
-      } <br><strong>Departing on:</strong> ${formData.departureDate}; ${
+      }; <br><strong>Phone Number:</strong> ${formData.phoneNumber}
+      <br><strong>Email:</strong> ${formData.email}
+      <br><strong>From:</strong> ${formData.from}
+      <br><strong>To:</strong> ${formData.to}
+      <br><strong>Departing on:</strong>${formData.departureDate} ${
         formData.arrivalDate &&
         ` <br><strong>Returning on:</strong> ${formData.arrivalDate}`
       } <br><strong>Message:</strong>${formData.message} </p>`,
