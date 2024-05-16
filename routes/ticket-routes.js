@@ -5,15 +5,6 @@ const nodemailer = require("nodemailer");
 const stripe = require("stripe")(process.env.STRIPE_API);
 const FormModel = require("../models/FormModel");
 
-// Nodemailer -
-let transporter = nodemailer.createTransport({
-  service: "Gmail",
-  auth: {
-    user: process.env.SENDER_EMAIL,
-    pass: process.env.SENDER_EMAIL_PASSWORD,
-  },
-});
-
 router.post("/ticket", async (req, res) => {
   try {
     // 1. Retrieve Data
@@ -40,6 +31,15 @@ router.post("/ticket", async (req, res) => {
     await FormModel.create(formData);
 
     // 3. Send email
+
+    let transporter = nodemailer.createTransport({
+      service: "Gmail",
+      auth: {
+        user: process.env.SENDER_EMAIL,
+        pass: process.env.SENDER_EMAIL_PASSWORD,
+      },
+    });
+
     let mailOptions = {
       from: process.env.SENDER_EMAIL,
       to: "info@citytours.ae",
