@@ -31,7 +31,7 @@ mongoose
   .then(() => console.log(`Connected to MonogDB successfully`))
   .catch((error) => console.log(`Error connecting to MongoDB ${error}`));
 
-// ----------------------------- Routes
+// ---------------------------- Routes
 app.use("/", ticketRoutes);
 
 app.listen(process.env.PORT);
