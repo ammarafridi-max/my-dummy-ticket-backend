@@ -14,6 +14,7 @@ router.post("/ticket", async (req, res) => {
         time: new Date().toLocaleTimeString(),
       },
       type: req.body.type,
+      currency: req.body.currency,
       price: req.body.price,
       passengers: req.body.passengers,
       email: req.body.email,
@@ -28,56 +29,56 @@ router.post("/ticket", async (req, res) => {
     console.log(formData);
 
     // 2. Send data to database.
-    await FormModel.create(formData);
+    // await FormModel.create(formData);
 
     // 3. Send email
 
-    let transporter = nodemailer.createTransport({
-      service: "Gmail",
-      auth: {
-        user: process.env.SENDER_EMAIL,
-        pass: process.env.SENDER_EMAIL_PASSWORD,
-      },
-    });
+    // let transporter = nodemailer.createTransport({
+    //   service: "Gmail",
+    //   auth: {
+    //     user: process.env.SENDER_EMAIL,
+    //     pass: process.env.SENDER_EMAIL_PASSWORD,
+    //   },
+    // });
 
-    let mailOptions = {
-      from: process.env.SENDER_EMAIL,
-      to: "info@citytours.ae",
+    // let mailOptions = {
+    //   from: process.env.SENDER_EMAIL,
+    //   to: "info@citytours.ae",
 
-      subject: `${
-        formData.passengers[0].firstName + " " + formData.passengers[0].lastName
-      } Submitted a Form On MyDummyTicket.ae`,
+    //   subject: `${
+    //     formData.passengers[0].firstName + " " + formData.passengers[0].lastName
+    //   } Submitted a Form On MyDummyTicket.ae`,
 
-      html: `
-      <p>
-      <strong>Type:</strong> ${formData.type}
-      <br><strong>Creation Time: </strong>${
-        formData.creation.time + " " + formData.creation.date
-      }<br>
-      ${formData.passengers.map((passenger, index) => {
-        return ` <strong>Passenger ${index + 1}:</strong>
-        ${passenger.title}
-        ${passenger.firstName}
-        ${passenger.lastName}<br>`;
-      })}<strong>Number of Tickets:</strong> ${
-        formData.quantity
-      }; <br><strong>Phone Number:</strong> ${formData.phoneNumber}
-      <br><strong>Email:</strong> ${formData.email}
-      <br><strong>From:</strong> ${formData.from}
-      <br><strong>To:</strong> ${formData.to}
-      <br><strong>Departing on:</strong>${formData.departureDate} ${
-        formData.arrivalDate &&
-        ` <br><strong>Returning on:</strong> ${formData.arrivalDate}`
-      } <br><strong>Message:</strong>${formData.message} </p>`,
-    };
+    //   html: `
+    //   <p>
+    //   <strong>Type:</strong> ${formData.type}
+    //   <br><strong>Creation Time: </strong>${
+    //     formData.creation.time + " " + formData.creation.date
+    //   }<br>
+    //   ${formData.passengers.map((passenger, index) => {
+    //     return ` <strong>Passenger ${index + 1}:</strong>
+    //     ${passenger.title}
+    //     ${passenger.firstName}
+    //     ${passenger.lastName}<br>`;
+    //   })}<strong>Number of Tickets:</strong> ${
+    //     formData.quantity
+    //   }; <br><strong>Phone Number:</strong> ${formData.phoneNumber}
+    //   <br><strong>Email:</strong> ${formData.email}
+    //   <br><strong>From:</strong> ${formData.from}
+    //   <br><strong>To:</strong> ${formData.to}
+    //   <br><strong>Departing on:</strong>${formData.departureDate} ${
+    //     formData.arrivalDate &&
+    //     ` <br><strong>Returning on:</strong> ${formData.arrivalDate}`
+    //   } <br><strong>Message:</strong>${formData.message} </p>`,
+    // };
 
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error("Error occurred:", error.message);
-        return;
-      }
-      console.log("Email sent successfully!");
-    });
+    // transporter.sendMail(mailOptions, (error, info) => {
+    //   if (error) {
+    //     console.error("Error occurred:", error.message);
+    //     return;
+    //   }
+    //   console.log("Email sent successfully!");
+    // });
 
     // 4. Stripe Checkout session
     const session = await stripe.checkout.sessions.create(
@@ -86,7 +87,7 @@ router.post("/ticket", async (req, res) => {
           {
             price_data: {
               unit_amount: formData.price * 100,
-              currency: "aed",
+              currency: formData.currency,
               product_data: {
                 name: formData.type,
               },
