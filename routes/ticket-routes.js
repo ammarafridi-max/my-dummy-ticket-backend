@@ -26,13 +26,11 @@ router.post("/ticket", async (req, res) => {
       quantity: req.body.quantity,
       message: req.body.message,
     };
-    console.log(formData);
 
     // 2. Send data to database.
     await FormModel.create(formData);
 
     // 3. Send email
-
     let transporter = nodemailer.createTransport({
       service: "Gmail",
       auth: {
@@ -56,7 +54,7 @@ router.post("/ticket", async (req, res) => {
         formData.creation.time + " " + formData.creation.date
       }<br>
       ${formData.passengers.map((passenger, index) => {
-        return ` <strong>Passenger ${index + 1}:</strong>
+        return `<strong>Passenger ${index + 1}:</strong>
         ${passenger.title}
         ${passenger.firstName}
         ${passenger.lastName}<br>`;
@@ -96,7 +94,7 @@ router.post("/ticket", async (req, res) => {
           },
         ],
         mode: "payment",
-        success_url: `${process.env.FRONTEND_URL}?success=true`,
+        success_url: `${process.env.FRONTEND_URL}/payment-successful`,
         cancel_url: `${process.env.FRONTEND_URL}`,
       },
       async (err, session) => {
