@@ -94,7 +94,7 @@ router.post("/ticket", async (req, res) => {
           },
         ],
         mode: "payment",
-        success_url: `${process.env.FRONTEND_URL}/payment-successful`,
+        success_url: `${process.env.FRONTEND_URL}payment-successful`,
         cancel_url: `${process.env.FRONTEND_URL}`,
       },
       async (err, session) => {
