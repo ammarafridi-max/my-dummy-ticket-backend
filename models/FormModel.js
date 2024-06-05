@@ -14,7 +14,11 @@ const FormSchema = mongoose.Schema({
   to: { type: String },
   departureDate: { type: String },
   arrivalDate: { type: String },
-  quantity: { type: Number },
+  quantity: {
+    adults: { type: Number },
+    children: { type: Number },
+    infants: { type: Number },
+  },
   message: { type: String },
 });
 

@@ -11,7 +11,7 @@ router.post("/ticket", async (req, res) => {
     const formData = {
       creation: {
         date: req.body.creation.date,
-        time: new Date().toLocaleTimeString(),
+        time: req.body.creation.time,
       },
       type: req.body.type,
       currency: req.body.currency,
@@ -27,10 +27,12 @@ router.post("/ticket", async (req, res) => {
       message: req.body.message,
     };
 
+    console.log(formData);
+
     // 2. Send data to database.
     await FormModel.create(formData);
 
-    // 3. Send email
+    // // 3. Send email
     let transporter = nodemailer.createTransport({
       service: "Gmail",
       auth: {
@@ -47,30 +49,35 @@ router.post("/ticket", async (req, res) => {
         formData.passengers[0].firstName + " " + formData.passengers[0].lastName
       } Submitted a Form On MyDummyTicket.ae`,
 
-      html: `
-      <p>
-      <strong>Type:</strong> ${formData.type}
-      <br><strong>Creation Time: </strong>${
+      html: `<p>
+      <strong>Type:</strong> ${formData.type}<br>
+      <strong>Submitted On: </strong>${
         formData.creation.time + " " + formData.creation.date
       }<br>
-      ${formData.passengers.map((passenger, index) => {
-        return `<strong>Passenger ${index + 1}:</strong>
-        ${passenger.title}
-        ${passenger.firstName}
-        ${passenger.lastName}<br>`;
-      })}<strong>Number of Tickets:</strong> ${
-        formData.quantity
-      }; <br><strong>Phone Number:</strong> ${formData.phoneNumber}
-      <br><strong>Email:</strong> ${formData.email}
-      <br><strong>From:</strong> ${formData.from}
-      <br><strong>To:</strong> ${formData.to}
-      <br><strong>Departing on:</strong>${formData.departureDate} ${
-        formData.arrivalDate &&
-        ` <br><strong>Returning on:</strong> ${formData.arrivalDate}`
-      } <br><strong>Message:</strong>${formData.message} </p>`,
+      <strong>Number of Tickets:</strong> ${
+        formData.quantity.adults +
+        formData.quantity.children +
+        formData.quantity.infants
+      }<br>
+      ${formData.passengers.map((passenger, i) => {
+        return `<strong>${passenger.type} ${i + 1}: </strong>${
+          passenger.title
+        } / ${passenger.firstName} / ${passenger.lastName} <br>`;
+      })}
+      <strong>Phone Number:</strong> ${formData.phoneNumber}<br>
+      <strong>Email:</strong> ${formData.email}<br>
+      <strong>From:</strong> ${formData.from}<br>
+      <strong>To:</strong> ${formData.to}<br>
+      <strong>Departing on:</strong>${formData.departureDate}<br>
+      ${
+        formData.type === "Return"
+          ? `<strong>Returning on:</strong> ${formData.arrivalDate}<br>`
+          : ""
+      }
+      <strong>Message:</strong>${formData.message} </p>`,
     };
 
-    transporter.sendMail(mailOptions, (error, info) => {
+    await transporter.sendMail(mailOptions, (error, info) => {
       if (error) {
         console.error("Error occurred:", error.message);
         return;
@@ -90,11 +97,14 @@ router.post("/ticket", async (req, res) => {
                 name: formData.type,
               },
             },
-            quantity: formData.quantity,
+            quantity:
+              formData.quantity.adults +
+              formData.quantity.children +
+              formData.quantity.infants,
           },
         ],
         mode: "payment",
-        success_url: `${process.env.FRONTEND_URL}payment-successful`,
+        success_url: `${process.env.FRONTEND_URL}/payment-successful`,
         cancel_url: `${process.env.FRONTEND_URL}`,
       },
       async (err, session) => {
