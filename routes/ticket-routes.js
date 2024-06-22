@@ -7,7 +7,7 @@ const FormModel = require("../models/FormModel");
 
 router.post("/ticket", async (req, res) => {
   try {
-    // 1. Retrieve Data
+    // Retrieve Data
     const formData = {
       creation: {
         date: req.body.creation.date,
@@ -27,10 +27,10 @@ router.post("/ticket", async (req, res) => {
       message: req.body.message,
     };
 
-    // 2. Send data to database.
+    // Send data to database
     await FormModel.create(formData);
 
-    // // // 3. Send email
+    // Send email
     let transporter = nodemailer.createTransport({
       service: "Gmail",
       auth: {
@@ -42,89 +42,67 @@ router.post("/ticket", async (req, res) => {
     let mailOptions = {
       from: process.env.SENDER_EMAIL,
       to: "info@citytours.ae",
-
-      subject: `${
-        formData.passengers[0].firstName + " " + formData.passengers[0].lastName
-      } Submitted a Form On MyDummyTicket.ae`,
-
+      subject: `${formData.passengers[0].firstName} ${formData.passengers[0].lastName} Submitted a Form On MyDummyTicket.ae`,
       html: `<p>
-      <strong>Type:</strong> ${formData.type}<br>
-      <strong>Submitted On: </strong>${
-        formData.creation.time + " " + formData.creation.date
+        <strong>Type:</strong> ${formData.type}<br>
+        <strong>Submitted On:</strong> ${formData.creation.time} ${
+        formData.creation.date
       }<br>
-      <strong>Number of Tickets:</strong> ${
-        formData.quantity.adults +
-        formData.quantity.children +
-        formData.quantity.infants
-      }<br>
-      ${formData.passengers.map((passenger, i) => {
-        return `<strong>${passenger.type} ${i + 1}: </strong>${
-          passenger.title
-        } / ${passenger.firstName} / ${passenger.lastName} <br>`;
-      })}
-      <strong>Phone Number:</strong> ${formData.phoneNumber}<br>
-      <strong>Email:</strong> ${formData.email}<br>
-      <strong>From:</strong> ${formData.from}<br>
-      <strong>To:</strong> ${formData.to}<br>
-      <strong>Departing on:</strong> ${formData.departureDate}<br>
-      ${
-        formData.type === "Return"
-          ? `<strong>Returning on:</strong> ${formData.arrivalDate}<br>`
-          : ""
-      }
-      <strong>Message:</strong> ${formData.message} </p>`,
+        <strong>Number of Tickets:</strong> ${
+          formData.quantity.adults +
+          formData.quantity.children +
+          formData.quantity.infants
+        }<br>
+        ${formData.passengers
+          .map((passenger, i) => {
+            return `<strong>${passenger.type} ${i + 1}:</strong> ${
+              passenger.title
+            } / ${passenger.firstName} / ${passenger.lastName} <br>`;
+          })
+          .join("")}
+        <strong>Phone Number:</strong> ${formData.phoneNumber}<br>
+        <strong>Email:</strong> ${formData.email}<br>
+        <strong>From:</strong> ${formData.from}<br>
+        <strong>To:</strong> ${formData.to}<br>
+        <strong>Departing on:</strong> ${formData.departureDate}<br>
+        ${
+          formData.type === "Return"
+            ? `<strong>Returning on:</strong> ${formData.arrivalDate}<br>`
+            : ""
+        }
+        <strong>Message:</strong> ${formData.message}
+      </p>`,
     };
 
-    await transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error("Error occurred:", error.message);
-        return;
-      }
-      console.log("Email sent successfully!");
+    await transporter.sendMail(mailOptions);
+
+    // Create Stripe Checkout session
+    const session = await stripe.checkout.sessions.create({
+      line_items: [
+        {
+          price_data: {
+            unit_amount: formData.price * 100,
+            currency: formData.currency,
+            product_data: {
+              name: formData.type,
+            },
+          },
+          quantity:
+            formData.quantity.adults +
+            formData.quantity.children +
+            formData.quantity.infants,
+        },
+      ],
+      mode: "payment",
+      success_url: `${process.env.FRONTEND_URL}/payment-successful`,
+      cancel_url: `${process.env.FRONTEND_URL}`,
     });
 
-    // // 4. Stripe Checkout session
-    const session = await stripe.checkout.sessions.create(
-      {
-        line_items: [
-          {
-            price_data: {
-              unit_amount: formData.price * 100,
-              currency: formData.currency,
-              product_data: {
-                name: formData.type,
-              },
-            },
-            quantity:
-              formData.quantity.adults +
-              formData.quantity.children +
-              formData.quantity.infants,
-          },
-        ],
-        mode: "payment",
-        success_url: `${process.env.FRONTEND_URL}/payment-successful`,
-        cancel_url: `${process.env.FRONTEND_URL}`,
-      },
-      async (err, session) => {
-        if (err) {
-          console.error("Error creating Stripe session:", err);
-          return res
-            .status(500)
-            .json({ error: "An unexpected error occurred" });
-        }
-
-        try {
-          // 5. Send response to client
-          res.status(200).json({
-            sessionId: session.id,
-            clientSecret: session.client_secret,
-            url: session.url,
-          });
-        } catch (error) {
-          console.error("Error:", error);
-        }
-      }
-    );
+    res.status(200).json({
+      sessionId: session.id,
+      clientSecret: session.client_secret,
+      url: session.url,
+    });
   } catch (error) {
     console.error("Error:", error);
     res.status(500).json({ error: "An unexpected error occurred" });
@@ -140,4 +118,5 @@ router.get("/tickets", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
 module.exports = router;

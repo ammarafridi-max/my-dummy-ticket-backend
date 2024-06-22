@@ -10,28 +10,26 @@ const ticketRoutes = require("./routes/ticket-routes");
 // Middleware
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+
+// Enable CORS for all routes
 app.use(
   cors({
     origin: process.env.FRONTEND_URL.replace(/\/$/, ""),
+    methods: "GET, POST, OPTIONS",
+    allowedHeaders: "Content-Type",
   })
 );
-app.options("*", (req, res) => {
-  res.setHeader(
-    "Access-Control-Allow-Origin",
-    process.env.FRONTEND_URL.replace(/\/$/, "")
-  );
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  res.sendStatus(200);
-});
 
 // DB Connection
 mongoose
   .connect(process.env.DB_URL)
-  .then(() => console.log(`Connected to MonogDB successfully`))
-  .catch((error) => console.log(`Error connecting to MongoDB ${error}`));
+  .then(() => console.log(`Connected to MongoDB successfully`))
+  .catch((error) => console.log(`Error connecting to MongoDB: ${error}`));
 
-// -------------------- Route --------------------
+// Routes
 app.use("/", ticketRoutes);
 
-app.listen(process.env.PORT);
+// Start the server
+app.listen(process.env.PORT, () => {
+  console.log(`Server running on port ${process.env.PORT}`);
+});
