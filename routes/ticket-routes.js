@@ -27,12 +27,10 @@ router.post("/ticket", async (req, res) => {
       message: req.body.message,
     };
 
-    console.log(formData);
-
     // 2. Send data to database.
     await FormModel.create(formData);
 
-    // // 3. Send email
+    // // // 3. Send email
     let transporter = nodemailer.createTransport({
       service: "Gmail",
       auth: {
@@ -68,13 +66,13 @@ router.post("/ticket", async (req, res) => {
       <strong>Email:</strong> ${formData.email}<br>
       <strong>From:</strong> ${formData.from}<br>
       <strong>To:</strong> ${formData.to}<br>
-      <strong>Departing on:</strong>${formData.departureDate}<br>
+      <strong>Departing on:</strong> ${formData.departureDate}<br>
       ${
         formData.type === "Return"
           ? `<strong>Returning on:</strong> ${formData.arrivalDate}<br>`
           : ""
       }
-      <strong>Message:</strong>${formData.message} </p>`,
+      <strong>Message:</strong> ${formData.message} </p>`,
     };
 
     await transporter.sendMail(mailOptions, (error, info) => {
@@ -85,7 +83,7 @@ router.post("/ticket", async (req, res) => {
       console.log("Email sent successfully!");
     });
 
-    // 4. Stripe Checkout session
+    // // 4. Stripe Checkout session
     const session = await stripe.checkout.sessions.create(
       {
         line_items: [
