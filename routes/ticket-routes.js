@@ -13,7 +13,7 @@ router.post("/ticket", async (req, res) => {
         date: req.body.creation.date,
         time: req.body.creation.time,
       },
-      type: req.body.type,
+      type: req.body.type + " Flight Reservation",
       currency: req.body.currency,
       price: req.body.price,
       passengers: req.body.passengers,
@@ -60,7 +60,11 @@ router.post("/ticket", async (req, res) => {
             } / ${passenger.firstName} / ${passenger.lastName} <br>`;
           })
           .join("")}
-        <strong>Phone Number:</strong> ${formData.phoneNumber}<br>
+        <strong>Phone Number:</strong> ${
+          formData.phoneNumber
+        } (<a href="https://api.whatsapp.com/send?phone=${
+        formData.phoneNumber
+      }">WhatsApp</a> | <a href="tel:${formData.phoneNumber}">Call</a>)<br>
         <strong>Email:</strong> ${formData.email}<br>
         <strong>From:</strong> ${formData.from}<br>
         <strong>To:</strong> ${formData.to}<br>
