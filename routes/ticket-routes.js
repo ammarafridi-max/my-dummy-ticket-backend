@@ -69,11 +69,7 @@ router.post("/ticket", async (req, res) => {
         <strong>From:</strong> ${formData.from}<br>
         <strong>To:</strong> ${formData.to}<br>
         <strong>Departing on:</strong> ${formData.departureDate}<br>
-        ${
-          formData.type === "Return"
-            ? `<strong>Returning on:</strong> ${formData.arrivalDate}<br>`
-            : ""
-        }
+        <strong>Departing on:</strong> ${formData.arrivalDate}<br>
         <strong>Message:</strong> ${formData.message}
       </p>`,
     };
