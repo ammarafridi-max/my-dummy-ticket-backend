@@ -11,20 +11,19 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 // Enable CORS for all routes
-// app.use(
-//   cors({
-//     origin: process.env.FRONTEND_URL.replace(/\/$/, ""),
-//     methods: "GET, POST, OPTIONS",
-//     allowedHeaders: "Content-Type",
-//   })
-// );
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL.replace(/\/$/, ""),
+    methods: "GET, POST, OPTIONS",
+    allowedHeaders: "Content-Type",
+  })
+);
 
-const corsOptions = {
-  origin: process.env.FRONTEND_URL,
-  optionsSuccessStatus: 200,
-};
-
-app.use(cors(corsOptions));
+// const corsOptions = {
+//   origin: process.env.FRONTEND_URL,
+//   optionsSuccessStatus: 200,
+// };
+// app.use(cors(corsOptions));
 
 // DB Connection
 mongoose
