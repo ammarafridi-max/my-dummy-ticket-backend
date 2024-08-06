@@ -37,8 +37,8 @@ mongoose
 
 // Routes
 app.use("/", ticketRoutes);
-app.use("/airports", airportRoutes);
-app.use("/flights", flightRoutes);
+// app.use("/airports", airportRoutes);
+// app.use("/flights", flightRoutes);
 
 // Start the server
 app.listen(process.env.PORT, () => {
