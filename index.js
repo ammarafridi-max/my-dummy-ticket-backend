@@ -33,7 +33,7 @@ app.use(cors(corsOptions));
 mongoose
   .connect(process.env.DB_URL)
   .then(() => console.log(`Connected to MongoDB successfully`))
-  .catch((error) => console.log(`Error connecting to MongoDB: ${error}`));
+  .catch((error) => console.log(`Error connecting to db: ${error}`));
 
 // Routes
 app.use("/", ticketRoutes);
