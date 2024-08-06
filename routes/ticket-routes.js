@@ -5,6 +5,12 @@ const nodemailer = require("nodemailer");
 const stripe = require("stripe")(process.env.STRIPE_API);
 const FormModel = require("../models/FormModel");
 
+const API_KEY = process.env.AMADEUS_API_KEY;
+const SECRET_KEY = process.env.AMADEUS_SECRET_KEY;
+let accessToken;
+
+// --------------- POST DUMMY TICKETS ---------------
+
 router.post("/ticket", async (req, res) => {
   try {
     // Retrieve Data
@@ -111,14 +117,14 @@ router.post("/ticket", async (req, res) => {
   }
 });
 
-router.get("/tickets", async (req, res) => {
-  try {
-    const data = await FormModel.find();
-    res.json(data);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
+// router.get("/tickets", async (req, res) => {
+//   try {
+//     const data = await FormModel.find();
+//     res.json(data);
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: "Internal Server Error" });
+//   }
+// });
 
 module.exports = router;

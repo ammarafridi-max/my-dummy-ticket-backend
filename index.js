@@ -6,6 +6,8 @@ const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 const ticketRoutes = require("./routes/ticket-routes");
+const airportRoutes = require("./routes/airport-routes");
+const flightRoutes = require("./routes/flight-routes");
 
 // Middleware
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -20,11 +22,12 @@ app.use(bodyParser.json());
 //   })
 // );
 
-app.use(
-  cors({
-    origin: "https://www.mydummyticket.ae",
-  })
-);
+const corsOptions = {
+  origin: process.env.FRONTEND_URL,
+  optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
 
 // DB Connection
 mongoose
@@ -34,6 +37,8 @@ mongoose
 
 // Routes
 app.use("/", ticketRoutes);
+app.use("/airports", airportRoutes);
+app.use("/flights", flightRoutes);
 
 // Start the server
 app.listen(process.env.PORT, () => {
