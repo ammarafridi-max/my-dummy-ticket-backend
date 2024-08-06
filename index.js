@@ -4,10 +4,7 @@ const app = express();
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 const ticketRoutes = require("./routes/ticket-routes");
-const airportRoutes = require("./routes/airport-routes");
-const flightRoutes = require("./routes/flight-routes");
 
 // Middleware
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -37,8 +34,6 @@ mongoose
 
 // Routes
 app.use("/", ticketRoutes);
-// app.use("/airports", airportRoutes);
-// app.use("/flights", flightRoutes);
 
 // Start the server
 app.listen(process.env.PORT, () => {
