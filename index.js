@@ -32,7 +32,7 @@ app.use(cors(corsOptions));
 // DB Connection
 mongoose
   .connect(process.env.DB_URL)
-  .then(() => console.log(`Connected to MongoDB successfully`))
+  .then(() => console.log(`Connected to DB successfully`))
   .catch((error) => console.log(`Error connecting to db: ${error}`));
 
 // Routes
