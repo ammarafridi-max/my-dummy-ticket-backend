@@ -5,6 +5,7 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const ticketRoutes = require("./routes/ticket-routes");
+const connectDB = require("./config/db");
 
 // Middleware
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -25,11 +26,8 @@ app.use(
 // };
 // app.use(cors(corsOptions));
 
-// DB Connection
-mongoose
-  .connect(process.env.DB_URL)
-  .then(() => console.log(`Connected to DB successfully`))
-  .catch((error) => console.log(`Error connecting to db: ${error}`));
+// Connect to DB
+connectDB();
 
 // Routes
 app.use("/", ticketRoutes);
