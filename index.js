@@ -1,38 +1,33 @@
 require("dotenv").config();
 const express = require("express");
-const app = express();
 const cors = require("cors");
-const bodyParser = require("body-parser");
-const mongoose = require("mongoose");
 const ticketRoutes = require("./routes/ticket-routes");
 const connectDB = require("./config/db");
+const airportRoutes = require("./routes/airport-routes");
+const flightRoutes = require("./routes/flight-routes");
+const path = require("path");
 
-// Middleware
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
+const app = express();
 
-// Enable CORS for all routes
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL.replace(/\/$/, ""),
-    methods: "GET, POST, OPTIONS",
-    allowedHeaders: "Content-Type",
-  })
-);
+app.use(express.urlencoded({ extended: false }));
+app.use(cors("*"));
+// Serve static files from the "uploads" directory
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// const corsOptions = {
-//   origin: process.env.FRONTEND_URL,
-//   optionsSuccessStatus: 200,
-// };
-// app.use(cors(corsOptions));
+app.use((req, res, next) => {
+  if (req.originalUrl === "/api/ticket/webhook") {
+    express.raw({ type: "application/json" })(req, res, next);
+  } else {
+    express.json({ limit: "50mb" })(req, res, next);
+  }
+});
 
-// Connect to DB
 connectDB();
 
-// Routes
-app.use("/", ticketRoutes);
+app.use("/api/ticket", ticketRoutes);
+app.use("/api/airports", airportRoutes);
+app.use("/api/flights", flightRoutes);
 
-// Start the server
 app.listen(process.env.PORT, () => {
-  console.log(`Server running on port ${process.env.PORT}`);
+ console.log(`Server running on port ${process.env.PORT}`);
 });
