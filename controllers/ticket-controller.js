@@ -73,8 +73,7 @@ exports.listenStripEvents = async (req, res) => {
             emailData
           );
 
-          console.log("rs ->",res);
-          
+       
         } catch (emailError) {
           console.error("Error sending email:", emailError);
         }
@@ -206,6 +205,7 @@ exports.updateTicketDetails = async (req, res) => {
             immediate: flightData.ticketAvailability.immediate,
             receiptDate: flightData.ticketAvailability.receiptDate,
           },
+          message: flightData.message,
         },
       },
       { new: true }

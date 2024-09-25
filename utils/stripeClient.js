@@ -34,7 +34,7 @@ const createCheckoutSession = async (formData) => {
     ],
     mode: "payment",
     success_url: `${process.env.FRONTEND_URL}/payment-successful`,
-    cancel_url: `${process.env.FRONTEND_URL}`,
+    cancel_url: `${process.env.FRONTEND_URL}/booking/review-details`,
   });
 
   return session;
