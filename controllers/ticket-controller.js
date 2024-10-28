@@ -8,20 +8,27 @@ const stripeClient = require("../utils/stripeClient");
 require("dotenv").config();
 const { format, parse } = require("date-fns");
 const { v4: uuidv4 } = require("uuid");
-const { sendEmail } = require("../utils/send-email");
+const { sendEmail, generateEmailTemplate } = require("../utils/send-email");
+
+const admin = process.env.ADMIN;
 
 exports.buyTicket = async (req, res) => {
   const ticketDetails = req.body;
 
-  let price = BASE_PRICE;
+  const quantity = ticketDetails.quantity;
+
+  // Calculate total count of quantity
+  const totalQuantity = quantity.adults + quantity.children + quantity.infants;
+
+  let price = BASE_PRICE * totalQuantity;
 
   const validity = ticketDetails.ticketValidity;
 
   if (validity === "7d") {
-    price = LATER_SEVEN_DAYS;
+    price = LATER_SEVEN_DAYS * totalQuantity;
   }
   if (validity === "14d") {
-    price = LATER_FOURTEEN_DAYS;
+    price = LATER_FOURTEEN_DAYS * totalQuantity;
   }
 
   if (ticketDetails.ticketPrice !== price) {
@@ -56,26 +63,52 @@ exports.listenStripEvents = async (req, res) => {
       case "checkout.session.completed": {
         const session = event.data.object;
 
-        const emailData = {
-          customerName: session.customer_email,
-          ticketType: session.metadata.ticketType || "Unknown",
-          departureCity: session.metadata.departureCity || "Unknown",
-          arrivalCity: session.metadata.arrivalCity || "Unknown",
-          departureDate: session.metadata.departureDate || "Unknown",
-          currency: session.currency.toUpperCase(),
-          amount: session.amount_total / 100,
-        };
+        // Email templates
+        const customerSubject = "Payment Confirmation";
+        const customerHtmlContent = generateEmailTemplate(
+          "customerPaymentConfirmation",
+          {
+            customerName: session.customer_email,
+            ticketType: session.metadata.ticketType || "Unknown",
+            departureCity: session.metadata.departureCity || "Unknown",
+            arrivalCity: session.metadata.arrivalCity || "Unknown",
+            departureDate: session.metadata.departureDate || "Unknown",
+            currency: session.currency.toUpperCase(),
+            amount: (session.amount_total / 100).toFixed(2),
+          }
+        );
+
+        const adminSubject = "New Payment Received";
+        const adminHtmlContent = generateEmailTemplate(
+          "adminPaymentNotification",
+          {
+            customerName: session.customer_email,
+            ticketType: session.metadata.ticketType || "Unknown",
+            departureCity: session.metadata.departureCity || "Unknown",
+            arrivalCity: session.metadata.arrivalCity || "Unknown",
+            departureDate: session.metadata.departureDate || "Unknown",
+            currency: session.currency.toUpperCase(),
+            amount: (session.amount_total / 100).toFixed(2),
+          }
+        );
+
+        // Send both emails concurrently
 
         try {
-          const res = await sendEmail(
-            session.customer_email,
-            "Payment Confirmation",
-            emailData
+          const [customerEmailResponse, adminEmailResponse] = await Promise.all(
+            [
+              sendEmail(
+                session.customer_email,
+                customerSubject,
+                customerHtmlContent
+              ),
+              sendEmail(admin, adminSubject, adminHtmlContent),
+            ]
           );
-
-       
-        } catch (emailError) {
-          console.error("Error sending email:", emailError);
+          console.log("Customer email sent: ", customerEmailResponse);
+          console.log("Admin email sent: ", adminEmailResponse);
+        } catch (error) {
+          console.error("Error sending emails: ", error);
         }
 
         res.status(200).json({ received: true });
@@ -144,15 +177,21 @@ exports.fetchFormDetails = async (req, res) => {
   try {
     const sessionInfo = req.sessionInfo;
 
-    let ticketPrice = BASE_PRICE;
+    const quantity = sessionInfo.quantity;
+
+    // Calculate total count of quantity
+    const totalQuantity =
+      quantity.adults + quantity.children + quantity.infants;
+
+    let ticketPrice = BASE_PRICE * totalQuantity;
 
     const validity = sessionInfo.ticketValidity;
 
     if (validity === "7d") {
-      ticketPrice = LATER_SEVEN_DAYS;
+      ticketPrice = LATER_SEVEN_DAYS * totalQuantity;
     }
     if (validity === "14d") {
-      ticketPrice = LATER_FOURTEEN_DAYS;
+      ticketPrice = LATER_FOURTEEN_DAYS * totalQuantity;
     }
 
     return res.status(200).json({
@@ -217,6 +256,26 @@ exports.updateTicketDetails = async (req, res) => {
       });
     }
 
+    const quantity = updatedData.quantity;
+    const totalQuantity =
+      quantity.adults + quantity.children + quantity.infants;
+
+    const subject = "New Customer Form Submission";
+    const htmlContent = generateEmailTemplate("adminFormSubmission", {
+      type: updatedData.type,
+      submittedOn: updatedData.createdAt,
+      ticketCount: totalQuantity,
+      passengers: updatedData.passengers,
+      number: updatedData.phoneNumber.code + updatedData.phoneNumber.digits,
+      email: updatedData.email,
+      from: updatedData.from,
+      to: updatedData.to,
+      departureDate: updatedData.departureDate,
+      returnDate: updatedData.arrivalDate,
+      message: updatedData.message,
+    });
+
+    sendEmail(admin, subject, htmlContent);
     return res.status(200).json({
       message: "Form details updated successfully",
     });
