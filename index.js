@@ -29,6 +29,8 @@ app.use((req, res, next) => {
   }
 });
 
+// Comment
+
 connectDB();
 
 app.use("/api/ticket", ticketRoutes);
