@@ -12,7 +12,7 @@ const validateSessionId = require("../middleware/verify-session");
 
 const router = express.Router();
 
-router.get("/getFormDetails", fetchFormDetails);
+router.get("/getFormDetails", validateSessionId, fetchFormDetails);
 router.post("/createForm", createForm);
 router.post("/buy-ticket", validateSessionId, buyTicket);
 router.post("/webhook", listenStripEvents);
