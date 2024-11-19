@@ -1,17 +1,17 @@
 require("dotenv").config();
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
-const createCheckoutSession = async (formData) => {
-  const ticketPrice = formData.ticketPrice;
-  const price = parseFloat(ticketPrice);
-
+async function createCheckoutSession(formData, sessionId) {
+  const totalAmount = parseFloat(formData.totalAmount);
   const metadata = {
+    customer: `${formData.passengers[0].firstName} ${formData.passengers[0].lastName}`,
     ticketType: formData.type,
     departureCity: formData.from,
     arrivalCity: formData.to,
     departureDate: formData.departureDate,
+    returnDate: formData.returnDate,
+    sessionId: sessionId,
   };
-  const email = formData.email;
 
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],
@@ -19,29 +19,28 @@ const createCheckoutSession = async (formData) => {
       enabled: true,
     },
     metadata,
-    customer_email: email,
+    customer_email: formData.email,
     line_items: [
       {
         price_data: {
-          unit_amount: price * 100,
+          unit_amount: totalAmount * 100,
           currency: "aed",
           product_data: {
-            name: formData.type,
+            name: `${formData.type} Flight Reservation`,
           },
         },
         quantity: 1,
       },
     ],
     mode: "payment",
-    success_url: `${process.env.FRONTEND_URL}/payment-successful`,
+    success_url: `${process.env.FRONTEND_URL}/payment-successful?sessionId=${sessionId}`,
     cancel_url: `${process.env.FRONTEND_URL}/booking/review-details`,
   });
 
   return session;
-};
+}
 
-// Middleware to verify Stripe signature
-const verifyStripeSignature = (req) => {
+function verifyStripeSignature(req) {
   const sig = req.headers["stripe-signature"];
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -55,6 +54,6 @@ const verifyStripeSignature = (req) => {
   } catch (err) {
     return null;
   }
-};
+}
 
 module.exports = { createCheckoutSession, verifyStripeSignature };

@@ -4,13 +4,9 @@ const { v4: uuidv4 } = require("uuid");
 const FormSchema = mongoose.Schema(
   {
     sessionId: { type: String, default: uuidv4, unique: true },
-    creation: {
-      date: { type: String },
-      time: { type: String },
-    },
     type: {
       type: String,
-      enum: ["One Way Flight Reservation", "Return Flight Reservation"],
+      enum: ["One Way", "Return"],
     },
     passengers: { type: Array },
     email: { type: String },
@@ -20,8 +16,8 @@ const FormSchema = mongoose.Schema(
     },
     from: { type: String },
     to: { type: String },
-    departureDate: { type: String },
-    arrivalDate: { type: String },
+    departureDate: { type: Date },
+    returnDate: { type: Date },
     quantity: {
       adults: { type: Number },
       children: { type: Number },
@@ -41,6 +37,7 @@ const FormSchema = mongoose.Schema(
       receiptDate: { type: String },
     },
     flightDetails: { type: Object },
+    totalAmount: { type: Number },
   },
 
   { timestamps: true }

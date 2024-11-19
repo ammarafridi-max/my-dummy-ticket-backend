@@ -14,35 +14,16 @@ const admin = process.env.ADMIN;
 
 exports.buyTicket = async (req, res) => {
   const ticketDetails = req.body;
-
-  const quantity = ticketDetails.quantity;
-
-  // Calculate total count of quantity
-  const totalQuantity = quantity.adults + quantity.children + quantity.infants;
-
-  let price = BASE_PRICE * totalQuantity;
-
-  const validity = ticketDetails.ticketValidity;
-
-  if (validity === "7d") {
-    price = LATER_SEVEN_DAYS * totalQuantity;
-  }
-  if (validity === "14d") {
-    price = LATER_FOURTEEN_DAYS * totalQuantity;
-  }
-
-  if (ticketDetails.ticketPrice !== price) {
-    ticketDetails.ticketPrice = price;
-  }
-
   try {
-    const session = await stripeClient.createCheckoutSession(ticketDetails);
+    const session = await stripeClient.createCheckoutSession(
+      ticketDetails,
+      ticketDetails.sessionId
+    );
     if (!session) {
       return res.status(404).json({
-        message: "Strip session not found",
+        message: "Stripe session not found",
       });
     }
-
     return res.status(200).json({
       message: "successfully created ticket",
       url: session.url,
@@ -52,122 +33,46 @@ exports.buyTicket = async (req, res) => {
   }
 };
 
-exports.listenStripEvents = async (req, res) => {
-  try {
-    const event = await stripeClient.verifyStripeSignature(req);
-    if (!event) {
-      return res.status(400).send(`Webhook Error`);
-    }
-
-    switch (event.type) {
-      case "checkout.session.completed": {
-        const session = event.data.object;
-
-        // Email templates
-        const customerSubject = "Payment Confirmation";
-        const customerHtmlContent = generateEmailTemplate(
-          "customerPaymentConfirmation",
-          {
-            customerName: session.customer_email,
-            ticketType: session.metadata.ticketType || "Unknown",
-            departureCity: session.metadata.departureCity || "Unknown",
-            arrivalCity: session.metadata.arrivalCity || "Unknown",
-            departureDate: session.metadata.departureDate || "Unknown",
-            currency: session.currency.toUpperCase(),
-            amount: (session.amount_total / 100).toFixed(2),
-          }
-        );
-
-        const adminSubject = "New Payment Received";
-        const adminHtmlContent = generateEmailTemplate(
-          "adminPaymentNotification",
-          {
-            customerName: session.customer_email,
-            ticketType: session.metadata.ticketType || "Unknown",
-            departureCity: session.metadata.departureCity || "Unknown",
-            arrivalCity: session.metadata.arrivalCity || "Unknown",
-            departureDate: session.metadata.departureDate || "Unknown",
-            currency: session.currency.toUpperCase(),
-            amount: (session.amount_total / 100).toFixed(2),
-          }
-        );
-
-        // Send both emails concurrently
-
-        try {
-          const [customerEmailResponse, adminEmailResponse] = await Promise.all(
-            [
-              sendEmail(
-                session.customer_email,
-                customerSubject,
-                customerHtmlContent
-              ),
-              sendEmail(admin, adminSubject, adminHtmlContent),
-            ]
-          );
-          console.log("Customer email sent: ", customerEmailResponse);
-          console.log("Admin email sent: ", adminEmailResponse);
-        } catch (error) {
-          console.error("Error sending emails: ", error);
-        }
-
-        res.status(200).json({ received: true });
-        break;
-      }
-      default:
-        res.status(200).json({ received: true });
-        break;
-    }
-  } catch (error) {
-    console.error("Error handling webhook event:", error);
-    return res.status(500).json({ error: "An unexpected error occurred" });
-  }
-};
-
 exports.createForm = async (req, res) => {
   const formData = req.body;
-
-  const formatDate = (dateStr) => {
-    const parsedDate = parse(dateStr, "MMMM dd, yyyy", new Date());
-    return format(parsedDate, "yyyy-MM-dd");
-  };
-
-  const now = new Date();
-  const creationDate = format(now, "yyyy-MM-dd");
-  const creationTime = format(now, "HH:mm:ss");
-
-  // Generate a UUID for sessionId
   const sessionId = uuidv4();
 
-  const form = {
-    sessionId: sessionId,
-    type: formData.type + " Flight Reservation",
-    from: formData.from,
-    to: formData.to,
-    departureDate: formatDate(formData.departureDate),
-    arrivalDate: formData.arrivalDate ? formatDate(formData.arrivalDate) : null,
-    quantity: formData.quantity,
-    phoneNumber: {
-      code: formData.number.code,
-      digits: formData.number.digits,
-    },
-    status: "SEARCH_FLIGHTS",
-    creation: {
-      date: creationDate,
-      time: creationTime,
-    },
-  };
-
   try {
+    const form = {
+      sessionId: sessionId,
+      type: formData.type,
+      from: formData.from,
+      to: formData.to,
+      departureDate: formData.departureDate,
+      returnDate:
+        formData.type === "Return" && formData.returnDate
+          ? formData.returnDate
+          : undefined,
+      quantity: formData.quantity,
+      phoneNumber: {
+        code: formData.number.code,
+        digits: formData.number.digits,
+      },
+      status: "SEARCH_FLIGHTS",
+    };
+
+    Object.keys(form).forEach(
+      (key) => form[key] === undefined && delete form[key]
+    );
+
     const data = await Form.create(form);
 
     return res.status(200).json({
-      message: "session has started",
+      message: "Session has started successfully.",
       sessionId: data.sessionId,
+      success: true,
     });
   } catch (error) {
+    console.error("Error creating form:", error);
+
     return res.status(500).json({
-      message: error.message,
+      message: "Failed to create the form. Please try again.",
+      error: error.message,
       success: false,
     });
   }
@@ -176,21 +81,18 @@ exports.createForm = async (req, res) => {
 exports.fetchFormDetails = async (req, res) => {
   try {
     const sessionInfo = req.sessionInfo;
-
     const quantity = sessionInfo.quantity;
-
-    // Calculate total count of quantity
     const totalQuantity =
       quantity.adults + quantity.children + quantity.infants;
 
     let ticketPrice = BASE_PRICE * totalQuantity;
 
-    const validity = sessionInfo.ticketValidity;
+    const ticketValidity = sessionInfo.ticketValidity;
 
-    if (validity === "7d") {
+    if (ticketValidity === "7d") {
       ticketPrice = LATER_SEVEN_DAYS * totalQuantity;
     }
-    if (validity === "14d") {
+    if (ticketValidity === "14d") {
       ticketPrice = LATER_FOURTEEN_DAYS * totalQuantity;
     }
 
@@ -237,7 +139,6 @@ exports.updateTicketDetails = async (req, res) => {
           from: flightData.from,
           to: flightData.to,
           departureDate: flightData.departureDate,
-          arrivalDate: flightData.arrivalDate,
           quantity: flightData.quantity,
           ticketValidity: flightData.ticketValidity,
           ticketAvailability: {
@@ -250,17 +151,23 @@ exports.updateTicketDetails = async (req, res) => {
       { new: true }
     );
 
+    if (flightData.returnDate) {
+      updatedData.returnDate = flightData.returnDate;
+    }
+
     if (!updatedData) {
       return res.status(404).json({
         message: "Failed to update data",
       });
     }
 
-    const quantity = updatedData.quantity;
     const totalQuantity =
-      quantity.adults + quantity.children + quantity.infants;
+      updatedData.quantity.adults +
+      updatedData.quantity.children +
+      updatedData.quantity.infants;
 
-    const subject = "New Customer Form Submission";
+    // Send email to admin
+    const subject = `${updatedData.passengers[0].firstName} ${updatedData.passengers[0].lastName} just submitted a from on MyDummyTicket.ae`;
     const htmlContent = generateEmailTemplate("adminFormSubmission", {
       type: updatedData.type,
       submittedOn: updatedData.createdAt,
@@ -271,7 +178,12 @@ exports.updateTicketDetails = async (req, res) => {
       from: updatedData.from,
       to: updatedData.to,
       departureDate: updatedData.departureDate,
-      returnDate: updatedData.arrivalDate,
+      departureFlight: updatedData.flightDetails.departureFlight,
+      returnDate: updatedData.returnDate,
+      returnFlight: updatedData.flightDetails.returnFlight,
+      ticketValidity: updatedData.ticketValidity,
+      ticketAvailability: updatedData.ticketAvailability.immediate,
+      ticketAvailabilityDate: updatedData.ticketAvailability.receiptDate,
       message: updatedData.message,
     });
 
@@ -283,5 +195,92 @@ exports.updateTicketDetails = async (req, res) => {
     res.status(500).json({
       message: error.message,
     });
+  }
+};
+
+exports.listenStripEvents = async (req, res) => {
+  try {
+    const event = await stripeClient.verifyStripeSignature(req);
+    if (!event) {
+      return res.status(400).send(`Webhook Error`);
+    }
+
+    switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object;
+        const sessionId = session.metadata.sessionId;
+
+        // 1. Update status to "PAYMENT_DONE"
+        const form = await Form.findOneAndUpdate(
+          { sessionId: sessionId },
+          { $set: { status: "PAYMENT_DONE" } },
+          { new: true }
+        );
+
+        if (!form) {
+          return res.status(404).json({
+            status: "fail",
+            message: "Session not found",
+          });
+        }
+
+        // 2. Send email to customer
+        const customerSubject = "Payment Confirmation for Your Booking";
+        const customerHtmlContent = generateEmailTemplate(
+          "customerPaymentConfirmation",
+          {
+            customer: session.metadata.customer,
+            email: session.customer_email,
+            ticketType: session.metadata.ticketType || "Unknown",
+            departureCity: session.metadata.departureCity || "Unknown",
+            arrivalCity: session.metadata.arrivalCity || "Unknown",
+            departureDate: session.metadata.departureDate || "Unknown",
+            returnDate: session.metadata.returnDate || "Not Specified",
+            currency: session.currency.toUpperCase(),
+            amount: (session.amount_total / 100).toFixed(2),
+          }
+        );
+
+        // 3. Send email to admin
+        const adminSubject = "New Payment Received";
+        const adminHtmlContent = generateEmailTemplate(
+          "adminPaymentNotification",
+          {
+            customer: session.metadata.customer,
+            email: session.customer_email,
+            ticketType: session.metadata.ticketType || "Unknown",
+            departureCity: session.metadata.departureCity || "Unknown",
+            arrivalCity: session.metadata.arrivalCity || "Unknown",
+            departureDate: session.metadata.departureDate || "Unknown",
+            returnDate: session.metadata.returnDate || "Not Specified",
+            currency: session.currency.toUpperCase(),
+            amount: (session.amount_total / 100).toFixed(2),
+          }
+        );
+
+        try {
+          const [customerEmailResponse, adminEmailResponse] = await Promise.all(
+            [
+              sendEmail(
+                session.customer_email,
+                customerSubject,
+                customerHtmlContent
+              ),
+              sendEmail(admin, adminSubject, adminHtmlContent),
+            ]
+          );
+        } catch (error) {
+          console.error("Error sending emails: ", error);
+        }
+        res.status(200).json({ received: true });
+        break;
+      }
+      default:
+        res.status(200).json({ received: true });
+        break;
+    }
+  } catch (error) {
+    console.error("Error handling webhook event:", error);
+    return res.status(500).json({ error: "An unexpected error occurred" });
   }
 };

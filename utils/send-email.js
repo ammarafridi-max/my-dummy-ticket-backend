@@ -1,5 +1,7 @@
 require("dotenv").config();
 const nodemailer = require("nodemailer");
+const formatDate = require("./formatDate");
+const formatDubaiTime = require("./formatDubaiTime");
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -52,7 +54,12 @@ const adminFormSubmissionTemplate = ({
   from,
   to,
   departureDate,
+  departureFlight,
   returnDate,
+  returnFlight,
+  ticketValidity,
+  ticketAvailability,
+  ticketAvailabilityDate,
   message,
 }) => {
   // Create a list of passengers
@@ -60,7 +67,7 @@ const adminFormSubmissionTemplate = ({
     .map(
       (passenger) => `
       <p>
-        <strong>${passenger.type}</strong> ${passenger.title}${passenger.firstName}${passenger.lastName}<br>
+        ${passenger.type}:  ${passenger.title} ${passenger.firstName} / ${passenger.lastName}<br>
       </p>`
     )
     .join("");
@@ -71,7 +78,9 @@ const adminFormSubmissionTemplate = ({
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>New Form Submission</title>
+  <title>${passengers[0].firstName} ${
+    passengers[0].lastName
+  } just submitted a from on MyDummyTicket.ae</title>
   <style>
     body {
       font-family: 'Arial', sans-serif;
@@ -186,7 +195,9 @@ const adminFormSubmissionTemplate = ({
       </tr>
       <tr>
         <td><strong>Submitted On:</strong></td>
-        <td><p>${submittedOn}</p></td>
+        <td><p>${formatDate(submittedOn)} ${formatDubaiTime(
+    submittedOn
+  )}</p></td>
       </tr>
       <tr>
         <td><strong>Number of Tickets:</strong></td>
@@ -214,18 +225,26 @@ const adminFormSubmissionTemplate = ({
       </tr>
       <tr>
         <td><strong>Departing On:</strong></td>
-        <td><p>${departureDate}</p></td>
+        <td><p>${formatDate(departureDate)}</p></td>
       </tr>
-      ${
-        returnDate
-          ? `
+      <tr>
+        <td><strong>Departure Flight:</strong></td>
+        <td><p>${departureFlight}</p></td>
+      </tr>
       <tr>
         <td><strong>Returning On:</strong></td>
-        <td><p>${returnDate}</p></td>
+        <td><p>${
+          returnDate === "Invalid Date"
+            ? "Not Specified"
+            : formatDate(returnDate)
+        }</p></td>
       </tr>
-      `
-          : ""
-      }
+      <tr>
+        <td><strong>Return Flight:</strong></td>
+        <td><p>${
+          returnFlight === null ? "Not Specified" : returnFlight
+        }</p></td>
+      </tr>
       ${
         message
           ? `
@@ -236,9 +255,21 @@ const adminFormSubmissionTemplate = ({
       `
           : ""
       }
+      <tr>
+        <td><strong>Ticket Validity:</strong></td>
+        <td><p>${ticketValidity}</p></td>
+      </tr>
+      <tr>
+        <td><strong>Ticket Availability:</strong></td>
+        <td><p>${ticketAvailability ? "Immediate" : "Later"}</p></td>
+      </tr>
+      <tr>
+        <td><strong>Ticket Receipt Date:</strong></td>
+        <td><p>${
+          ticketAvailabilityDate !== null && formatDate(ticketAvailabilityDate)
+        }</p></td>
+      </tr>
     </table>
-
-  
 
     <div class="footer">
       <p>Best regards,</p>
@@ -254,11 +285,13 @@ const adminFormSubmissionTemplate = ({
 
 // Template for admin payment notification email
 const adminPaymentNotificationTemplate = ({
-  customerName,
+  customer,
+  email,
   ticketType,
   departureCity,
   arrivalCity,
   departureDate,
+  returnDate,
   currency,
   amount,
 }) => {
@@ -272,22 +305,21 @@ const adminPaymentNotificationTemplate = ({
 </head>
 <body>
   <div>
-    <!-- Header with Icon -->
-    <h1>Payment Confirmation</h1>
 
     <!-- Greeting Message -->
     <p>Dear Admin,</p>
-    <p>We are excited to inform you that a payment has been successfully processed! Here are the details:</p>
+    <p>A payment has been successfully processed for a recent booking. Here are the details:</p>
 
     <!-- Payment Details -->
  
-    <p>Payment Amount: ${currency} ${amount}</p>
+    <p>Payment Amount: ${currency}${amount}</p>
     <p>Ticket Type: ${ticketType}</p>
-    <p>Customer Email: ${customerName}</p>
+    <p>Name: ${customer}</p>
+    <p>Email: ${email}</p>
     <p>From: ${departureCity}</p>
     <p>To: ${arrivalCity}</p>
-    <p>Departure Date: ${departureDate}</p>
-
+    <p>Departure Date: ${formatDate(departureDate)}</p>
+    <p>Return Date: ${returnDate && formatDate(returnDate)}</p>
   
     <!-- Footer -->
     <p>Best regards,</p>
@@ -301,11 +333,13 @@ const adminPaymentNotificationTemplate = ({
 
 // Template for customer payment confirmation email
 const customerPaymentConfirmationTemplate = ({
-  customerName,
+  customer,
+  email,
   ticketType,
   departureCity,
   arrivalCity,
   departureDate,
+  returnDate,
   currency,
   amount,
 }) => {
@@ -316,22 +350,27 @@ const customerPaymentConfirmationTemplate = ({
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Order Confirmation</title>
+  <style>
+    p {
+      font-size:18px
+    };
+  </style>
 </head>
 <body>
   <div>
-    <h1>Order Confirmation</h1>
-    <p>Dear ${customerName},</p>
-    <p>Your payment of ${currency} ${amount} has been successfully processed. Below are the details of your order:</p>
+    <p>Dear ${customer},</p>
+    <p>Thank you for your payment! We are pleased to confirm that your booking has been successfully processed. Here are the details of your ticket:</p>
 
+    <p>Payment Amount: ${currency}${amount}</p>
     <p>Ticket Type: ${ticketType}</p>
-    <p>Email: ${customerName}</p>
+    <p>Email: ${email}</p>
     <p>From: ${departureCity}</p>
     <p>To: ${arrivalCity}</p>
-    <p>Departing On: ${departureDate}</p>
+    <p>Departing On: ${formatDate(departureDate)}</p>
+    ${returnDate && `<p>Returning On: ${formatDate(returnDate)}</p>`}
+    <p>Your dummy ticket will be sent to your email address shortly. If you have any questions or require assistance, please don’t hesitate to contact us.</p>
+    <p>We look forward to serving you!</p>
 
-    <p>If you have any questions, feel free to contact us at reservation@citytours.ae.</p>
-
-    <p>Thank you for choosing us!</p>
     <p>My Dummy Ticket</p>
   </div>
 </body>
