@@ -10,8 +10,15 @@ const path = require("path");
 const app = express();
 
 app.use(express.urlencoded({ extended: false }));
-app.use(cors("*"));
-// Serve static files from the "uploads" directory
+
+const corsOptions = {
+  origin: process.env.FRONTEND_URL,
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use((req, res, next) => {
@@ -29,5 +36,5 @@ app.use("/api/airports", airportRoutes);
 app.use("/api/flights", flightRoutes);
 
 app.listen(process.env.PORT, () => {
- console.log(`Server running on port ${process.env.PORT}`);
+  console.log(`Server running on port ${process.env.PORT}`);
 });
