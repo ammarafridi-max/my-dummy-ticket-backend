@@ -31,6 +31,8 @@ app.use((req, res, next) => {
 
 connectDB();
 
+// Routes
+
 app.use("/api/ticket", ticketRoutes);
 app.use("/api/airports", airportRoutes);
 app.use("/api/flights", flightRoutes);
