@@ -249,11 +249,11 @@ exports.listenStripEvents = async (req, res) => {
         try {
           const [customerEmailResponse, adminEmailResponse] = await Promise.all(
             [
-              sendEmail(
-                session.customer_email,
-                customerSubject,
-                customerHtmlContent
-              ),
+              // sendEmail(
+              //   session.customer_email,
+              //   customerSubject,
+              //   customerHtmlContent
+              // ),
               sendEmail(admin, adminSubject, adminHtmlContent),
             ]
           );
