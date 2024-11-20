@@ -15,18 +15,18 @@ const admin = process.env.ADMIN;
 exports.buyTicket = async (req, res) => {
   const ticketDetails = req.body;
   try {
-    const session = await stripeClient.createCheckoutSession(
+    const stripeSession = await stripeClient.createCheckoutSession(
       ticketDetails,
       ticketDetails.sessionId
     );
-    if (!session) {
+    if (!stripeSession) {
       return res.status(404).json({
         message: "Stripe session not found",
       });
     }
     return res.status(200).json({
       message: "successfully created ticket",
-      url: session.url,
+      url: stripeSession.url,
     });
   } catch (error) {
     return res.status(500).json({ error: "An unexpected error occurred" });
@@ -35,30 +35,19 @@ exports.buyTicket = async (req, res) => {
 
 exports.createForm = async (req, res) => {
   const formData = req.body;
-  const sessionId = uuidv4();
-
   try {
+    const sessionId = uuidv4();
     const form = {
-      sessionId: sessionId,
+      sessionId,
       type: formData.type,
       from: formData.from,
       to: formData.to,
       departureDate: formData.departureDate,
-      returnDate:
-        formData.type === "Return" && formData.returnDate
-          ? formData.returnDate
-          : undefined,
+      returnDate: formData.type === "Return" ? formData.returnDate : undefined,
       quantity: formData.quantity,
-      phoneNumber: {
-        code: formData.number.code,
-        digits: formData.number.digits,
-      },
+      phoneNumber: formData.number,
       status: "SEARCH_FLIGHTS",
     };
-
-    Object.keys(form).forEach(
-      (key) => form[key] === undefined && delete form[key]
-    );
 
     const data = await Form.create(form);
 
@@ -72,7 +61,6 @@ exports.createForm = async (req, res) => {
 
     return res.status(500).json({
       message: "Failed to create the form. Please try again.",
-      error: error.message,
       success: false,
     });
   }
