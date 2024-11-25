@@ -11,13 +11,13 @@ const FormSchema = mongoose.Schema(
     passengers: { type: Array },
     email: { type: String },
     phoneNumber: {
-      code: { type: String, required: true },
-      digits: { type: String, required: true },
+      code: { type: String },
+      digits: { type: String },
     },
     from: { type: String },
     to: { type: String },
-    departureDate: { type: Date },
-    returnDate: { type: Date },
+    departureDate: { type: String },
+    returnDate: { type: String },
     quantity: {
       adults: { type: Number },
       children: { type: Number },
@@ -30,7 +30,7 @@ const FormSchema = mongoose.Schema(
     },
     ticketValidity: {
       type: String,
-      enum: ["48h", "7d", "14d"],
+      enum: ["48 Hours", "7 Days", "14 Days"],
     },
     ticketAvailability: {
       immediate: { type: Boolean },
@@ -38,6 +38,10 @@ const FormSchema = mongoose.Schema(
     },
     flightDetails: { type: Object },
     totalAmount: { type: Number },
+    amountPaid: {
+      currency: { type: String },
+      amount: { type: Number },
+    },
   },
 
   { timestamps: true }

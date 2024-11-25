@@ -50,18 +50,31 @@ exports.addAirlineInfoByCode = async (req, res) => {
 
 exports.fetchFlightsList = async (req, res) => {
   try {
-    const sessionInfo = req.sessionInfo;
+    // const flightSearchParams = {
+    //   originLocationCode: extractIataCode(sessionInfo.from),
+    //   destinationLocationCode: extractIataCode(sessionInfo.to),
+    //   departureDate: sessionInfo.departureDate,
+    //   adults: sessionInfo.quantity.adults,
+    //   children: sessionInfo.quantity.children,
+    //   infants: sessionInfo.quantity.infants,
+    //   ...(sessionInfo.type === "Return" && sessionInfo.returnDate
+    //     ? { returnDate: sessionInfo.returnDate }
+    //     : {}),
+    // };
+
+    const { type, from, to, departureDate, returnDate } = req.body;
+    console.log(req.body);
+
+    const quantity = { adults: 1, children: 0, infants: 0 };
 
     const flightSearchParams = {
-      originLocationCode: extractIataCode(sessionInfo.from),
-      destinationLocationCode: extractIataCode(sessionInfo.to),
-      departureDate: formatAmadeusDate(sessionInfo.departureDate),
-      adults: sessionInfo.quantity.adults,
-      children: sessionInfo.quantity.children,
-      infants: sessionInfo.quantity.infants,
-      ...(sessionInfo.type === "Return" && sessionInfo.returnDate
-        ? { returnDate: formatAmadeusDate(sessionInfo.returnDate) }
-        : {}),
+      originLocationCode: extractIataCode(from),
+      destinationLocationCode: extractIataCode(to),
+      departureDate: departureDate,
+      adults: quantity.adults,
+      children: quantity.children,
+      infants: quantity.infants,
+      ...(type === "Return" && returnDate ? { returnDate: returnDate } : {}),
     };
 
     const [nonStopResponse, oneStopResponse] = await Promise.all([
@@ -131,7 +144,6 @@ exports.fetchFlightsList = async (req, res) => {
     return res.status(200).json({
       message: "Flights list fetched successfully",
       flights: flightsWithAirlineDetails,
-      session: sessionInfo,
     });
   } catch (error) {
     console.error("Error fetching flights list:", error);

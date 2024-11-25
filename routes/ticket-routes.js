@@ -1,21 +1,20 @@
 require("dotenv").config();
 const express = require("express");
 const {
-  createForm,
-  updateTicketDetails,
   fetchFormDetails,
   buyTicket,
   listenStripEvents,
-  updatePaymentStatus,
+  createTicketRequest,
 } = require("../controllers/ticket-controller");
 const validateSessionId = require("../middleware/verify-session");
 
 const router = express.Router();
 
-router.get("/getFormDetails", validateSessionId, fetchFormDetails);
-router.post("/createForm", createForm);
+router.post("/create-ticket", createTicketRequest);
+router.get("/get-form-details", fetchFormDetails);
 router.post("/buy-ticket", validateSessionId, buyTicket);
 router.post("/webhook", listenStripEvents);
-router.put("/updateFormDetails", validateSessionId, updateTicketDetails);
+// router.post("/createForm", createForm);
+// router.put("/updateFormDetails", validateSessionId, updateTicketDetails);
 
 module.exports = router;
