@@ -1,10 +1,11 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const ticketRoutes = require("./routes/ticket-routes");
 const connectDB = require("./config/db");
+const ticketRoutes = require("./routes/ticket-routes");
 const airportRoutes = require("./routes/airport-routes");
 const flightRoutes = require("./routes/flight-routes");
+const adminRoutes = require("./routes/admin-routes");
 const path = require("path");
 
 const app = express();
@@ -29,13 +30,12 @@ app.use((req, res, next) => {
   }
 });
 
-// Comment
-
 connectDB();
 
 app.use("/api/ticket", ticketRoutes);
 app.use("/api/airports", airportRoutes);
 app.use("/api/flights", flightRoutes);
+app.use("/api/admin", adminRoutes);
 
 app.listen(process.env.PORT, () => {
   console.log(`Server running on port ${process.env.PORT}`);

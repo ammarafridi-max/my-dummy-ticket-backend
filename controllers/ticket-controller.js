@@ -71,6 +71,13 @@ exports.fetchFormDetails = async (req, res) => {
 
     const data = await Form.findOne({ sessionId: sessionId });
 
+    if (!data)
+      return res.status(404).json({
+        status: "fail",
+        message: "Ticket details could not be found",
+        data,
+      });
+
     return res.status(200).json({
       status: "success",
       message: "ticket details fetched successfully",
@@ -133,6 +140,7 @@ exports.listenStripEvents = async (req, res) => {
                 currency: session.currency.toUpperCase(),
                 amount: parseFloat((session.amount_total / 100).toFixed(2)),
               },
+              orderStatus: "PENDING",
             },
           },
           { new: true }

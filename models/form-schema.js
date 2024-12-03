@@ -42,6 +42,7 @@ const FormSchema = mongoose.Schema(
       currency: { type: String },
       amount: { type: Number },
     },
+    orderStatus: { type: String, enum: ["PENDING", "DELIVERED", "CONTACTED"] },
   },
 
   { timestamps: true }
