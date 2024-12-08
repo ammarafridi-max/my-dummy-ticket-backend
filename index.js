@@ -1,6 +1,5 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
 const connectDB = require('./config/db');
 const ticketRoutes = require('./routes/ticket-routes');
 const airportRoutes = require('./routes/airport-routes');
@@ -12,13 +11,28 @@ const app = express();
 
 app.use(express.urlencoded({ extended: false }));
 
-const corsOptions = {
+// const corsOptions = {
+//   origin: [process.env.FRONTEND_URL, process.env.ADMIN_URL],
+//   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+//   credentials: true,
+// };
+
+// app.use(cors(corsOptions));
+
+const cors = {
   origin: [process.env.FRONTEND_URL, process.env.ADMIN_URL],
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  credentials: true,
+  default: process.env.FRONTEND_URL,
 };
 
-app.use(cors(corsOptions));
+app.all('*', function (req, res, next) {
+  const origin = cors.origin.includes(req.header('origin').toLowerCase())
+    ? req.headers.origin
+    : cors.default;
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+  res.header('Access-Control-Allow-Origin', origin);
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+});
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
