@@ -14,7 +14,7 @@ app.use(express.urlencoded({ extended: false }));
 
 const corsOptions = {
   origin: [process.env.FRONTEND_URL, process.env.ADMIN_URL],
-  default: process.env.ADMIN_URL,
+  default: process.env.FRONTEND_URL,
 };
 
 app.all('*', function (req, res, next) {
