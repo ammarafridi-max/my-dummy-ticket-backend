@@ -1,12 +1,12 @@
-const mongoose = require("mongoose");
-const { v4: uuidv4 } = require("uuid");
+const mongoose = require('mongoose');
+const { v4: uuidv4 } = require('uuid');
 
 const FormSchema = mongoose.Schema(
   {
     sessionId: { type: String, default: uuidv4, unique: true },
     type: {
       type: String,
-      enum: ["One Way", "Return"],
+      enum: ['One Way', 'Return'],
     },
     passengers: { type: Array },
     email: { type: String },
@@ -26,11 +26,11 @@ const FormSchema = mongoose.Schema(
     message: { type: String },
     status: {
       type: String,
-      enum: ["SEARCH_FLIGHTS", "REVIEW_ORDER", "PAYMENT_DONE"],
+      enum: ['SEARCH_FLIGHTS', 'REVIEW_ORDER', 'PAYMENT_DONE'],
     },
     ticketValidity: {
       type: String,
-      enum: ["48 Hours", "7 Days", "14 Days"],
+      enum: ['48 Hours', '7 Days', '14 Days'],
     },
     ticketAvailability: {
       immediate: { type: Boolean },
@@ -42,12 +42,13 @@ const FormSchema = mongoose.Schema(
       currency: { type: String },
       amount: { type: Number },
     },
-    orderStatus: { type: String, enum: ["PENDING", "DELIVERED", "CONTACTED"] },
+    orderStatus: { type: String, enum: ['PENDING', 'DELIVERED', 'CONTACTED'] },
+    handledBy: { type: String },
   },
 
   { timestamps: true }
 );
 
-const Form = mongoose.model("Form", FormSchema);
+const Form = mongoose.model('Form', FormSchema);
 
 module.exports = Form;

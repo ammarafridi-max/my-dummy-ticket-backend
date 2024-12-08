@@ -1,8 +1,8 @@
-const Form = require("../models/form-schema");
-const stripeClient = require("../utils/stripeClient");
-require("dotenv").config();
-const { v4: uuidv4 } = require("uuid");
-const { sendEmail, generateEmailTemplate } = require("../utils/send-email");
+const Form = require('../models/form-schema');
+const stripeClient = require('../utils/stripeClient');
+require('dotenv').config();
+const { v4: uuidv4 } = require('uuid');
+const { sendEmail, generateEmailTemplate } = require('../utils/send-email');
 
 const admin = process.env.ADMIN;
 
@@ -16,7 +16,8 @@ exports.createTicketRequest = async (req, res) => {
     const updatedData = {
       ...data,
       sessionId,
-      amountPaid: { currency: "", amount: 0 },
+      amountPaid: { currency: '', amount: 0 },
+      handledBy: '',
     };
 
     // 1. Upload data to DB
@@ -24,12 +25,10 @@ exports.createTicketRequest = async (req, res) => {
 
     // 2. Send email to admin
     const totalQuantity =
-      result.quantity.adults +
-      result.quantity.children +
-      result.quantity.infants;
+      result.quantity.adults + result.quantity.children + result.quantity.infants;
 
     const subject = `${result.passengers[0].firstName} ${result.passengers[0].lastName} just submitted a from on MyDummyTicket.ae`;
-    const htmlContent = generateEmailTemplate("adminFormSubmission", {
+    const htmlContent = generateEmailTemplate('adminFormSubmission', {
       type: result.type,
       submittedOn: result.createdAt,
       ticketCount: totalQuantity,
@@ -50,14 +49,14 @@ exports.createTicketRequest = async (req, res) => {
 
     sendEmail(admin, subject, htmlContent);
     res.status(200).json({
-      status: "success",
-      message: "Data received",
+      status: 'success',
+      message: 'Data received',
       data: result,
       sessionId: result.sessionId,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ status: "fail", message: "Server error" });
+    res.status(500).json({ status: 'fail', message: 'Server error' });
   }
 };
 
@@ -66,21 +65,21 @@ exports.createTicketRequest = async (req, res) => {
 
 exports.fetchFormDetails = async (req, res) => {
   try {
-    const sessionId = req.headers["x-session-id"];
+    const sessionId = req.headers['x-session-id'];
     console.log(sessionId);
 
     const data = await Form.findOne({ sessionId: sessionId });
 
     if (!data)
       return res.status(404).json({
-        status: "fail",
-        message: "Ticket details could not be found",
+        status: 'fail',
+        message: 'Ticket details could not be found',
         data,
       });
 
     return res.status(200).json({
-      status: "success",
-      message: "ticket details fetched successfully",
+      status: 'success',
+      message: 'ticket details fetched successfully',
       data,
     });
   } catch (error) {
@@ -103,15 +102,15 @@ exports.buyTicket = async (req, res) => {
     );
     if (!stripeSession) {
       return res.status(404).json({
-        message: "Stripe session not found",
+        message: 'Stripe session not found',
       });
     }
     return res.status(200).json({
-      message: "successfully created ticket",
+      message: 'successfully created ticket',
       url: stripeSession.url,
     });
   } catch (error) {
-    return res.status(500).json({ error: "An unexpected error occurred" });
+    return res.status(500).json({ error: 'An unexpected error occurred' });
   }
 };
 
@@ -126,7 +125,7 @@ exports.listenStripEvents = async (req, res) => {
     }
 
     switch (event.type) {
-      case "checkout.session.completed": {
+      case 'checkout.session.completed': {
         const session = event.data.object;
         const sessionId = session.metadata.sessionId;
 
@@ -135,12 +134,12 @@ exports.listenStripEvents = async (req, res) => {
           { sessionId: sessionId },
           {
             $set: {
-              status: "PAYMENT_DONE",
+              status: 'PAYMENT_DONE',
               amountPaid: {
                 currency: session.currency.toUpperCase(),
                 amount: parseFloat((session.amount_total / 100).toFixed(2)),
               },
-              orderStatus: "PENDING",
+              orderStatus: 'PENDING',
             },
           },
           { new: true }
@@ -148,58 +147,50 @@ exports.listenStripEvents = async (req, res) => {
 
         if (!form) {
           return res.status(404).json({
-            status: "fail",
-            message: "Session not found",
+            status: 'fail',
+            message: 'Session not found',
           });
         }
 
         // 2. Send email to customer
-        const customerSubject = "Payment Confirmation for Your Booking";
-        const customerHtmlContent = generateEmailTemplate(
-          "customerPaymentConfirmation",
-          {
-            customer: session.metadata.customer,
-            email: session.customer_email,
-            ticketType: session.metadata.ticketType || "Unknown",
-            departureCity: session.metadata.departureCity || "Unknown",
-            arrivalCity: session.metadata.arrivalCity || "Unknown",
-            departureDate: session.metadata.departureDate || "Unknown",
-            returnDate: session.metadata.returnDate || "Not Specified",
-            currency: session.currency.toUpperCase(),
-            amount: (session.amount_total / 100).toFixed(2),
-          }
-        );
+        const customerSubject = 'Payment Confirmation for Your Booking';
+        const customerHtmlContent = generateEmailTemplate('customerPaymentConfirmation', {
+          customer: session.metadata.customer,
+          email: session.customer_email,
+          ticketType: session.metadata.ticketType || 'Unknown',
+          departureCity: session.metadata.departureCity || 'Unknown',
+          arrivalCity: session.metadata.arrivalCity || 'Unknown',
+          departureDate: session.metadata.departureDate || 'Unknown',
+          returnDate: session.metadata.returnDate || 'Not Specified',
+          currency: session.currency.toUpperCase(),
+          amount: (session.amount_total / 100).toFixed(2),
+        });
 
         // 3. Send email to admin
-        const adminSubject = "New Payment Received";
-        const adminHtmlContent = generateEmailTemplate(
-          "adminPaymentNotification",
-          {
-            customer: session.metadata.customer,
-            email: session.customer_email,
-            ticketType: session.metadata.ticketType || "Unknown",
-            departureCity: session.metadata.departureCity || "Unknown",
-            arrivalCity: session.metadata.arrivalCity || "Unknown",
-            departureDate: session.metadata.departureDate || "Unknown",
-            returnDate: session.metadata.returnDate || "Not Specified",
-            currency: session.currency.toUpperCase(),
-            amount: (session.amount_total / 100).toFixed(2),
-          }
-        );
+        const adminSubject = 'New Payment Received';
+        const adminHtmlContent = generateEmailTemplate('adminPaymentNotification', {
+          customer: session.metadata.customer,
+          email: session.customer_email,
+          ticketType: session.metadata.ticketType || 'Unknown',
+          departureCity: session.metadata.departureCity || 'Unknown',
+          arrivalCity: session.metadata.arrivalCity || 'Unknown',
+          departureDate: session.metadata.departureDate || 'Unknown',
+          returnDate: session.metadata.returnDate || 'Not Specified',
+          currency: session.currency.toUpperCase(),
+          amount: (session.amount_total / 100).toFixed(2),
+        });
 
         try {
-          const [customerEmailResponse, adminEmailResponse] = await Promise.all(
-            [
-              // sendEmail(
-              //   session.customer_email,
-              //   customerSubject,
-              //   customerHtmlContent
-              // ),
-              sendEmail(admin, adminSubject, adminHtmlContent),
-            ]
-          );
+          const [customerEmailResponse, adminEmailResponse] = await Promise.all([
+            // sendEmail(
+            //   session.customer_email,
+            //   customerSubject,
+            //   customerHtmlContent
+            // ),
+            sendEmail(admin, adminSubject, adminHtmlContent),
+          ]);
         } catch (error) {
-          console.error("Error sending emails: ", error);
+          console.error('Error sending emails: ', error);
         }
         res.status(200).json({ received: true });
         break;
@@ -209,8 +200,8 @@ exports.listenStripEvents = async (req, res) => {
         break;
     }
   } catch (error) {
-    console.error("Error handling webhook event:", error);
-    return res.status(500).json({ error: "An unexpected error occurred" });
+    console.error('Error handling webhook event:', error);
+    return res.status(500).json({ error: 'An unexpected error occurred' });
   }
 };
 
