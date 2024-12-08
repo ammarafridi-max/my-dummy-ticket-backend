@@ -27,25 +27,17 @@ app.use(express.urlencoded({ extended: false }));
 //   next();
 // });
 
-const allowedDomains = [process.env.FRONTEND_URL, process.env.ADMIN_URL];
-
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (allowedDomains.includes(origin)) {
+app.use(function (req, res, next) {
+  var allowedDomains = [process.env.FRONTEND_URL, process.env.ADMIN_URL];
+  var origin = req.headers.origin;
+  if (allowedDomains.indexOf(origin) > -1) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   }
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'Origin, X-Requested-With, Content-Type, Accept, Authorization'
-  );
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.setHeader('Access-Control-Allow-Credentials', true);
 
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
-  }
+  next();
 });
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
