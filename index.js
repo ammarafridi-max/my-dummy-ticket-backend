@@ -13,7 +13,7 @@ const app = express();
 app.use(express.urlencoded({ extended: false }));
 
 const corsOptions = {
-  origin: process.env.FRONTEND_URL,
+  origin: [process.env.FRONTEND_URL, process.env.ADMIN_URL],
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true,
 };
