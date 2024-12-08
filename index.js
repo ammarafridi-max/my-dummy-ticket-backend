@@ -25,9 +25,7 @@ const cors = {
 };
 
 app.all('*', function (req, res, next) {
-  const origin = cors.origin.includes(req.header('origin').toLowerCase())
-    ? req.headers.origin
-    : cors.default;
+  const origin = cors.origin.includes(req.header('origin')) ? req.headers.origin : cors.default;
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
   res.header('Access-Control-Allow-Origin', origin);
   res.header(
@@ -37,7 +35,7 @@ app.all('*', function (req, res, next) {
   next();
 });
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 app.use((req, res, next) => {
   if (req.originalUrl === '/api/ticket/webhook') {
