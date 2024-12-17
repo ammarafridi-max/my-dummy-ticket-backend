@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const connectDB = require('./config/db');
 const ticketRoutes = require('./routes/ticket-routes');
 const airportRoutes = require('./routes/airport-routes');
@@ -12,21 +13,37 @@ const app = express();
 
 app.use(express.urlencoded({ extended: false }));
 
-const cors = {
-  origin: [process.env.FRONTEND_URL, process.env.ADMIN_URL],
-  default: process.env.FRONTEND_URL,
+// const cors = {
+//   origin: [process.env.FRONTEND_URL, process.env.ADMIN_URL],
+//   default: process.env.FRONTEND_URL,
+// };
+
+// app.all('*', function (req, res, next) {
+//   const origin = cors.origin.includes(req.header('origin')) ? req.headers.origin : cors.default;
+//   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+//   res.header('Access-Control-Allow-Origin', origin);
+//   res.header(
+//     'Access-Control-Allow-Headers',
+//     'Origin, X-Session-ID, X-Requested-With, Content-Type, Accept'
+//   );
+//   next();
+// });
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = [process.env.FRONTEND_URL, process.env.ADMIN_URL];
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+  allowedHeaders: ['Origin', 'X-Session-ID', 'X-Requested-With', 'Content-Type', 'Accept'],
+  credentials: true,
 };
 
-app.all('*', function (req, res, next) {
-  const origin = cors.origin.includes(req.header('origin')) ? req.headers.origin : cors.default;
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-  res.header('Access-Control-Allow-Origin', origin);
-  res.header(
-    'Access-Control-Allow-Headers',
-    'Origin, X-Session-ID, X-Requested-With, Content-Type, Accept'
-  );
-  next();
-});
+app.use(cors(corsOptions));
 
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
