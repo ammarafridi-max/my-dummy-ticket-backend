@@ -1,16 +1,16 @@
-const { v4: isUuid } = require("uuid");
-const Form = require("../models/form-schema");
+const { v4: isUuid } = require('uuid');
+const DummyTicket = require('../models/DummyTicket');
 
 const validateSessionId = async (req, res, next) => {
-  const sessionId = req.headers["x-session-id"];
+  const sessionId = req.headers['x-session-id'];
   if (!sessionId || !isUuid(sessionId)) {
-    return res.status(400).json({ message: "Invalid or missing session ID" });
+    return res.status(400).json({ message: 'Invalid or missing session ID' });
   }
-  const sessionInfo = await Form.findOne({ sessionId: sessionId });
+  const sessionInfo = await DummyTicket.findOne({ sessionId: sessionId });
   if (!sessionInfo) {
     return res.status(401).json({
       error: true,
-      message: "Unauthorized!",
+      message: 'Unauthorized!',
     });
   }
   req.sessionId = sessionId;

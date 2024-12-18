@@ -1,4 +1,4 @@
-const Form = require('../models/form-schema');
+const DummyTicket = require('../models/DummyTicket');
 const stripeClient = require('../utils/stripeClient');
 require('dotenv').config();
 const { v4: uuidv4 } = require('uuid');
@@ -21,7 +21,7 @@ exports.createTicketRequest = async (req, res) => {
     };
 
     // 1. Upload data to DB
-    const result = await Form.create(updatedData);
+    const result = await DummyTicket.create(updatedData);
 
     // 2. Send email to admin
     const totalQuantity =
@@ -68,7 +68,7 @@ exports.fetchFormDetails = async (req, res) => {
     const sessionId = req.headers['x-session-id'];
     console.log(sessionId);
 
-    const data = await Form.findOne({ sessionId: sessionId });
+    const data = await DummyTicket.findOne({ sessionId: sessionId });
 
     if (!data)
       return res.status(404).json({
@@ -130,7 +130,7 @@ exports.listenStripEvents = async (req, res) => {
         const sessionId = session.metadata.sessionId;
 
         // 1. Update status to "PAYMENT_DONE"
-        const form = await Form.findOneAndUpdate(
+        const form = await DummyTicket.findOneAndUpdate(
           { sessionId: sessionId },
           {
             $set: {

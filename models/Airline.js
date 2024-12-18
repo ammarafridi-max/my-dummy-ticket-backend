@@ -1,6 +1,6 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
-const airlineSchema = mongoose.Schema({
+const AirlineSchema = mongoose.Schema({
   iataCode: { type: String },
   icaoCode: { type: String },
   businessName: { type: String },
@@ -8,6 +8,6 @@ const airlineSchema = mongoose.Schema({
   logo: { type: String },
 });
 
-const Airline = mongoose.model("airline", airlineSchema);
+const Airline = mongoose.model('airline', AirlineSchema);
 
 module.exports = Airline;

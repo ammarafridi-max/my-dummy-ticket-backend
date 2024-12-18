@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const { v4: uuidv4 } = require('uuid');
 
-const FormSchema = mongoose.Schema(
+const DummyTicketSchema = mongoose.Schema(
   {
     sessionId: { type: String, default: uuidv4, unique: true },
     type: {
@@ -49,6 +49,6 @@ const FormSchema = mongoose.Schema(
   { timestamps: true }
 );
 
-const Form = mongoose.model('Form', FormSchema);
+const DummyTicket = mongoose.model('dummyTicket', DummyTicketSchema);
 
-module.exports = Form;
+module.exports = DummyTicket;

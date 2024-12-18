@@ -2,14 +2,14 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
-const ticketRoutes = require('./routes/ticket-routes');
-const airportRoutes = require('./routes/airport-routes');
-const flightRoutes = require('./routes/flight-routes');
-const adminRoutes = require('./routes/admin-routes');
-const roleRoutes = require('./routes/role-routes');
 const path = require('path');
-
 const app = express();
+const ticketRoutes = require('./routes/ticket-routes');
+const airportRoutes = require('./routes/airport.routes');
+const flightRoutes = require('./routes/flight.routes');
+const adminRoutes = require('./routes/admin-routes');
+const userRoutes = require('./routes/user.routes');
+const roleRoutes = require('./routes/role.routes');
 
 app.use(express.urlencoded({ extended: false }));
 
@@ -62,6 +62,7 @@ app.use('/api/airports', airportRoutes);
 app.use('/api/flights', flightRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/roles', roleRoutes);
+app.use('/api/users', userRoutes);
 
 app.listen(process.env.PORT, () => {
   console.log(`Server running on port ${process.env.PORT}`);

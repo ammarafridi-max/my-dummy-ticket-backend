@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const RoleSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  slug: { type: String, required: true },
+  slug: { type: String, required: true, unique: [true, 'Slug must be unique'] },
   permissions: {
     dummyTickets: {
       read: { type: Boolean },
@@ -20,6 +20,9 @@ const RoleSchema = new mongoose.Schema({
       read: { type: Boolean },
       update: { type: Boolean },
       delete: { type: Boolean },
+    },
+    others: {
+      readAmount: { type: Boolean },
     },
   },
 });
