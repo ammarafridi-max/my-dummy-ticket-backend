@@ -1,13 +1,13 @@
-require("dotenv").config();
-const nodemailer = require("nodemailer");
-const formatDate = require("./formatDate");
-const formatDubaiTime = require("./formatDubaiTime");
+require('dotenv').config();
+const nodemailer = require('nodemailer');
+const formatDate = require('./formatDate');
+const formatDubaiTime = require('./formatDubaiTime');
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  service: 'gmail',
   auth: {
     user: process.env.SENDER_EMAIL,
-    pass: process.env.SENDER_EMAIL_PASSWORD,
+    pass: process.env.SENDER_PASSWORD,
   },
 });
 
@@ -24,7 +24,7 @@ const sendEmail = async (to, subject, htmlContent) => {
     const res = await transporter.sendMail(mailOptions);
     return res;
   } catch (error) {
-    console.error("Error sending email:", error);
+    console.error('Error sending email:', error);
     return null;
   }
 };
@@ -32,14 +32,14 @@ const sendEmail = async (to, subject, htmlContent) => {
 // Function to generate email templates
 const generateEmailTemplate = (templateType, templateData) => {
   switch (templateType) {
-    case "adminFormSubmission":
+    case 'adminFormSubmission':
       return adminFormSubmissionTemplate(templateData);
-    case "adminPaymentNotification":
+    case 'adminPaymentNotification':
       return adminPaymentNotificationTemplate(templateData);
-    case "customerPaymentConfirmation":
+    case 'customerPaymentConfirmation':
       return customerPaymentConfirmationTemplate(templateData);
     default:
-      return "";
+      return '';
   }
 };
 
@@ -70,7 +70,7 @@ const adminFormSubmissionTemplate = ({
         ${passenger.type}:  ${passenger.title} ${passenger.firstName} / ${passenger.lastName}<br>
       </p>`
     )
-    .join("");
+    .join('');
 
   return `
  <!DOCTYPE html>
@@ -195,9 +195,7 @@ const adminFormSubmissionTemplate = ({
       </tr>
       <tr>
         <td><strong>Submitted On:</strong></td>
-        <td><p>${formatDate(submittedOn)} ${formatDubaiTime(
-    submittedOn
-  )}</p></td>
+        <td><p>${formatDate(submittedOn)} ${formatDubaiTime(submittedOn)}</p></td>
       </tr>
       <tr>
         <td><strong>Number of Tickets:</strong></td>
@@ -233,17 +231,11 @@ const adminFormSubmissionTemplate = ({
       </tr>
       <tr>
         <td><strong>Returning On:</strong></td>
-        <td><p>${
-          returnDate === "Invalid Date"
-            ? "Not Specified"
-            : formatDate(returnDate)
-        }</p></td>
+        <td><p>${returnDate === 'Invalid Date' ? 'Not Specified' : formatDate(returnDate)}</p></td>
       </tr>
       <tr>
         <td><strong>Return Flight:</strong></td>
-        <td><p>${
-          returnFlight === null ? "Not Specified" : returnFlight
-        }</p></td>
+        <td><p>${returnFlight === null ? 'Not Specified' : returnFlight}</p></td>
       </tr>
       ${
         message
@@ -253,7 +245,7 @@ const adminFormSubmissionTemplate = ({
         <td><p>${message}</p></td>
       </tr>
       `
-          : ""
+          : ''
       }
       <tr>
         <td><strong>Ticket Validity:</strong></td>
@@ -261,13 +253,11 @@ const adminFormSubmissionTemplate = ({
       </tr>
       <tr>
         <td><strong>Ticket Availability:</strong></td>
-        <td><p>${ticketAvailability ? "Immediate" : "Later"}</p></td>
+        <td><p>${ticketAvailability ? 'Immediate' : 'Later'}</p></td>
       </tr>
       <tr>
         <td><strong>Ticket Receipt Date:</strong></td>
-        <td><p>${
-          ticketAvailabilityDate !== null && formatDate(ticketAvailabilityDate)
-        }</p></td>
+        <td><p>${ticketAvailabilityDate !== null && formatDate(ticketAvailabilityDate)}</p></td>
       </tr>
     </table>
 
@@ -306,13 +296,10 @@ const adminPaymentNotificationTemplate = ({
 <body>
   <div>
 
-    <!-- Greeting Message -->
     <p>Dear Admin,</p>
     <p>A payment has been successfully processed for a recent booking. Here are the details:</p>
-
-    <!-- Payment Details -->
  
-    <p>Payment Amount: ${currency}${amount}</p>
+    <!--<p>Payment Amount: ${currency}${amount}</p>-->
     <p>Ticket Type: ${ticketType}</p>
     <p>Name: ${customer}</p>
     <p>Email: ${email}</p>

@@ -167,7 +167,7 @@ exports.listenStripEvents = async (req, res) => {
         });
 
         // 3. Send email to admin
-        const adminSubject = 'New Payment Received';
+        const adminSubject = `Payment received by ${session.metadata.customer}`;
         const adminHtmlContent = generateEmailTemplate('adminPaymentNotification', {
           customer: session.metadata.customer,
           email: session.customer_email,
