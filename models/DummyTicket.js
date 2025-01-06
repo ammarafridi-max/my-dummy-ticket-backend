@@ -49,6 +49,6 @@ const DummyTicketSchema = mongoose.Schema(
   { timestamps: true }
 );
 
-const DummyTicket = mongoose.model('dummyticket', DummyTicketSchema);
+const DummyTicket = mongoose.model('dummyTicket', DummyTicketSchema);
 
 module.exports = DummyTicket;
