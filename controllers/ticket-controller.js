@@ -4,7 +4,7 @@ require('dotenv').config();
 const { v4: uuidv4 } = require('uuid');
 const { sendEmail, generateEmailTemplate } = require('../utils/send-email');
 
-const admin = process.env.ADMIN;
+const admin = process.env.SENDER_EMAIL;
 
 // A new ticket request is made from "booking/select-flights". The data
 // is stored in MongoDB
