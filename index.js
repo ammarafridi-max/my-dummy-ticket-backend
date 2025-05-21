@@ -20,8 +20,12 @@ const app = express();
 
 // ---------- STATIC FILES ----------
 app.use(
-  '/public/uploads',
-  express.static(path.join(__dirname, 'public/uploads'))
+  '/uploads',
+  express.static(path.join(__dirname, 'public/uploads'), {
+    setHeaders: (res, path) => {
+      res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+    },
+  })
 );
 
 process.on('uncaughtException', (err) => {
@@ -42,7 +46,7 @@ app.use(mongoSanitize());
 
 // ---------- RATE LIMITING ----------
 const limiter = rateLimit({
-  max: 300,
+  max: 500,
   windowMs: 60 * 60 * 1000,
   message: 'Too many requests from this IP, please try again in an hour!',
 });
@@ -67,6 +71,7 @@ const corsOptions = {
     'Accept',
     'Authorization',
   ],
+  exposedHeaders: ['Cross-Origin-Resource-Policy'],
   credentials: true,
 };
 
@@ -106,13 +111,13 @@ app.all('*', (req, res, next) => {
 
 app.use(globalErrorHandler);
 
-app.listen(process.env.PORT || 3001, () => {
-  console.log(`Server running on port ${process.env.PORT}`);
+const server = app.listen(process.env.PORT || 3001, () => {
+  console.log(`Server running on port ${process.env.PORT || 3001}`);
 });
 
 process.on('unhandledRejection', (err) => {
   console.log('UNHANDLED REJECTION! 💥 Shutting down...');
-  console.log(err.name, err.message);
+  console.log(err);
   server.close(() => {
     process.exit(1);
   });

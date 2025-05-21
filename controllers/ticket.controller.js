@@ -1,4 +1,5 @@
 require('dotenv').config();
+const amadeus = require('../utils/amadeus');
 const DummyTicket = require('../models/DummyTicket');
 const stripeClient = require('../utils/stripeClient');
 const { v4: uuidv4 } = require('uuid');

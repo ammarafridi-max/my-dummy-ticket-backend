@@ -9,7 +9,7 @@ exports.getAllTickets = async (req, res) => {
       data,
     });
   } catch (error) {
-    console.error('Error in getAllTickets:', error); // Debugging log
+    console.error('Error in getAllTickets:', error);
     res.status(500).json({
       status: 'fail',
       message: 'An error occurred',
