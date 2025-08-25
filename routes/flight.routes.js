@@ -6,7 +6,7 @@ const {
   addAirlineInfoByCode,
 } = require('../controllers/flights.controller');
 
-router.post('/', fetchFlightsList);
-router.post('/addAirlineInfo/:airlineCode', addAirlineInfoByCode);
+router.route('/').post(fetchFlightsList);
+router.route('/add').post(addAirlineInfoByCode);
 
 module.exports = router;

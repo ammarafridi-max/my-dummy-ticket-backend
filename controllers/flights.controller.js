@@ -1,8 +1,7 @@
-const Airline = require('../models/Airline');
 require('dotenv').config();
+const Airline = require('../models/Airline');
 const amadeus = require('../utils/amadeus');
 const extractIataCode = require('../utils/extractIataCode');
-const formatAmadeusDate = require('../utils/formatAmadeusDate');
 
 exports.addAirlineInfoByCode = async (req, res) => {
   try {
@@ -56,36 +55,52 @@ exports.fetchFlightsList = async (req, res) => {
   try {
     const { type, from, to, departureDate, returnDate } = req.body;
 
-    if(!from || !to || !departureDate){
-      return res.status(404).json({status: 'fail', message: 'Please provide the departure destination, arrival destination, and the departure date'})
+    if (!from || !to || !departureDate) {
+      return res.status(404).json({
+        status: 'fail',
+        message:
+          'Please provide the departure destination, arrival destination, and the departure date',
+      });
     }
-
-    const quantity = { adults: 1, children: 0, infants: 0 };
 
     const flightSearchParams = {
       originLocationCode: extractIataCode(from),
       destinationLocationCode: extractIataCode(to),
       departureDate,
-      adults: quantity.adults,
-      children: quantity.children,
-      infants: quantity.infants,
+      adults: 1,
+      children: 0,
+      infants: 0,
       ...(type === 'Return' && returnDate ? { returnDate } : {}),
     };
 
     const response = await fetchFlights(flightSearchParams);
+
     if (!response?.data) {
       return res.status(404).json({ message: 'No flights available' });
     }
 
     let flights = response.data;
 
-    flights = flights.filter((flight) => flight.itineraries[0].segments.length <= 2);
+    flights = flights.filter(
+      (flight) => flight.itineraries[0].segments.length <= 2
+    );
 
-    const airlineCodes = [...new Set(flights.flatMap((flight) => flight.validatingAirlineCodes))];
-    const airlinesInDb = await Airline.find({ iataCode: { $in: airlineCodes } });
-    const airlinesInDbMap = new Map(airlinesInDb.map((airline) => [airline.iataCode, airline]));
+    const airlineCodes = [
+      ...new Set(flights.flatMap((flight) => flight.validatingAirlineCodes)),
+    ];
 
-    const missingAirlineCodes = airlineCodes.filter((code) => !airlinesInDbMap.has(code));
+    const airlinesInDb = await Airline.find({
+      iataCode: { $in: airlineCodes },
+    });
+
+    const airlinesInDbMap = new Map(
+      airlinesInDb.map((airline) => [airline.iataCode, airline])
+    );
+
+    const missingAirlineCodes = airlineCodes.filter(
+      (code) => !airlinesInDbMap.has(code)
+    );
+
     let newAirlineDetails = [];
 
     if (missingAirlineCodes.length > 0) {
@@ -103,9 +118,14 @@ exports.fetchFlightsList = async (req, res) => {
       await Airline.insertMany(newAirlineDetails, { ordered: false });
     }
 
-    newAirlineDetails.forEach((detail) => airlinesInDbMap.set(detail.iataCode, detail));
+    newAirlineDetails.forEach((detail) =>
+      airlinesInDbMap.set(detail.iataCode, detail)
+    );
 
-    const flightsWithAirlineDetails = attachAirlineDetails(flights, airlinesInDbMap);
+    const flightsWithAirlineDetails = attachAirlineDetails(
+      flights,
+      airlinesInDbMap
+    );
 
     flightsWithAirlineDetails.sort((a, b) => {
       const aSegments = a.itineraries[0].segments.length;
@@ -129,7 +149,21 @@ async function fetchFlights(params) {
 
 function attachAirlineDetails(flights, airlinesMap) {
   return flights.map((flight) => {
-    const airlineDetails = flight.validatingAirlineCodes.map((code) => airlinesMap.get(code) || {});
-    return { ...flight, airlineDetails };
+    const enrichedItineraries = flight.itineraries.map((itinerary) => {
+      const enrichedSegments = itinerary.segments.map((segment) => {
+        const carrier = segment.carrierCode;
+        const airlineDetail = airlinesMap.get(carrier) || {};
+        return { ...segment, airlineDetail };
+      });
+      return { ...itinerary, segments: enrichedSegments };
+    });
+
+    return {
+      ...flight,
+      itineraries: enrichedItineraries,
+      airlineDetails: flight.validatingAirlineCodes.map(
+        (code) => airlinesMap.get(code) || {}
+      ),
+    };
   });
 }

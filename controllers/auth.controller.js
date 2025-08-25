@@ -37,12 +37,18 @@ exports.login = catchAsync(async (req, res, next) => {
   const { username, password } = req.body;
 
   if (!username || !password)
-    return next(new AppError('Username and password are required.', 400));
+    return res
+      .status(400)
+      .json({ message: 'Username and password are required' });
 
   const user = await User.findOne({ username }).select('+password');
 
-  if (!user || !(await user.correctPassword(password, user.password))) {
-    return next(new AppError('Incorrect username or password.', 401));
+  if (!user) {
+    return next(new AppError('User does not exist', 404));
+  }
+
+  if (!(await user.correctPassword(password, user.password))) {
+    return next(new AppError('Incorrect password.', 401));
   }
 
   if (user.status === 'INACTIVE')

@@ -1,5 +1,5 @@
-require("dotenv").config();
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+require('dotenv').config();
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 async function createCheckoutSession(formData, sessionId) {
   const totalAmount = parseFloat(formData.totalAmount);
@@ -14,7 +14,7 @@ async function createCheckoutSession(formData, sessionId) {
   };
 
   const session = await stripe.checkout.sessions.create({
-    payment_method_types: ["card"],
+    payment_method_types: ['card'],
     invoice_creation: {
       enabled: true,
     },
@@ -24,7 +24,7 @@ async function createCheckoutSession(formData, sessionId) {
       {
         price_data: {
           unit_amount: totalAmount * 100,
-          currency: "aed",
+          currency: 'aed',
           product_data: {
             name: `${formData.type} Flight Reservation`,
           },
@@ -32,26 +32,24 @@ async function createCheckoutSession(formData, sessionId) {
         quantity: 1,
       },
     ],
-    mode: "payment",
-    success_url: `${process.env.FRONTEND_URL}/payment-successful?sessionId=${sessionId}`,
-    cancel_url: `${process.env.FRONTEND_URL}/booking/review-details`,
+    mode: 'payment',
+    success_url: `${process.env.MDT_FRONTEND}/payment-successful?sessionId=${sessionId}`,
+    cancel_url: `${process.env.MDT_FRONTEND}/booking/review-details`,
   });
 
   return session;
 }
 
 function verifyStripeSignature(req) {
-  const sig = req.headers["stripe-signature"];
-  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
+  const sig = req.headers['stripe-signature'];
   try {
-    const result = stripe.webhooks.constructEvent(
+    return stripe.webhooks.constructEvent(
       req.body,
       sig,
-      endpointSecret
+      process.env.STRIPE_WEBHOOK_SECRET
     );
-    return result;
   } catch (err) {
+    console.error('❌ Stripe signature verification failed:', err.message);
     return null;
   }
 }
