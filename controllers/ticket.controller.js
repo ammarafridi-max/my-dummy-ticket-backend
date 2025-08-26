@@ -8,6 +8,7 @@ const AppError = require('../utils/appError');
 const {
   adminFormSubmissionEmail,
   adminPaymentCompletionEmail,
+  laterDateDeliveryEmail,
 } = require('../utils/email');
 
 exports.getAllTickets = catchAsync(async (req, res, next) => {
@@ -184,8 +185,8 @@ exports.createTicketRequest = catchAsync(async (req, res) => {
     returnDate: result.returnDate,
     flightDetails: result.flightDetails,
     ticketValidity: result.ticketValidity,
-    ticketAvailability: result.ticketAvailability.immediate,
-    ticketAvailabilityDate: result.ticketAvailability.receiptDate,
+    ticketDelivery: result.ticketDelivery.immediate,
+    ticketDeliveryDate: result.ticketDelivery.deliveryDate,
     message: result.message,
   });
 
@@ -225,33 +226,38 @@ exports.stripePaymentWebhook = async (req, res, next) => {
     const currency = session.currency.toUpperCase();
     const amount = parseFloat((session.amount_total / 100).toFixed(2));
 
-    await updatePayment(sessionId, currency, amount);
+    const doc = await DummyTicket.findOneAndUpdate(
+      { sessionId },
+      {
+        $set: {
+          paymentStatus: 'PAID',
+          amountPaid: {
+            currency,
+            amount,
+          },
+          orderStatus: 'PENDING',
+        },
+      },
+      { new: true }
+    );
+
+    if (!doc.ticketDelivery.immediate) {
+      await laterDateDeliveryEmail({
+        to: doc.email,
+        passenger: doc.passengers[0].firstName.split(' ')[0],
+        deliveryDate: doc.ticketDelivery.deliveryDate,
+      });
+    }
 
     await adminPaymentCompletionEmail({
-      type: session.metadata.ticketType || 'Not specified',
-      from: session.metadata.departureCity || 'Not specified',
-      to: session.metadata.arrivalCity || 'Not specified',
-      departureDate: session.metadata.departureDate || 'Not specified',
-      returnDate: session.metadata.returnDate || 'Not specified',
+      type: doc.type || 'Not specified',
+      from: doc.from || 'Not specified',
+      to: doc.to || 'Not specified',
+      departureDate: doc.departureDate || 'Not specified',
+      returnDate: doc.returnDate || 'Not specified',
       customer: session.metadata.customer || 'Not specified',
-      email: session.customer_email || 'Not specified',
+      email: doc.email || 'Not specified',
     });
-
-    // await sendEmail(
-    //   process.env.SENDER_EMAIL,
-    //   `Payment received by ${session.metadata.customer}`,
-    //   generateEmailTemplate('adminPaymentNotification', {
-    //     customer: session.metadata.customer,
-    //     email: session.customer_email,
-    //     ticketType: session.metadata.ticketType || 'Unknown',
-    //     departureCity: session.metadata.departureCity || 'Unknown',
-    //     arrivalCity: session.metadata.arrivalCity || 'Unknown',
-    //     departureDate: session.metadata.departureDate || 'Unknown',
-    //     returnDate: session.metadata.returnDate || 'Not Specified',
-    //     currency: session.currency.toUpperCase(),
-    //     amount: (session.amount_total / 100).toFixed(2),
-    //   })
-    // );
 
     return res.status(200).json({ received: true });
   }

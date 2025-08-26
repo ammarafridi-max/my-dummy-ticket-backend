@@ -65,12 +65,12 @@ exports.updateUser = catchAsync(async (req, res, next) => {
 });
 
 exports.deleteUser = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
+  const { username } = req.params;
 
-  if (!id)
-    return res.json({ status: 'fail', message: "User's id is missing." });
+  if (!username)
+    return res.json({ status: 'fail', message: 'Username is missing.' });
 
-  const user = await User.findOneAndDelete({ _id: id });
+  const user = await User.findOneAndDelete({ username: username });
 
   if (!user) {
     return res
@@ -80,7 +80,7 @@ exports.deleteUser = catchAsync(async (req, res, next) => {
 
   return res.status(200).json({
     status: 'success',
-    message: `User ${id} deleted successfully`,
+    message: `User ${username} deleted successfully`,
   });
 });
 

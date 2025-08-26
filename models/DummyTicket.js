@@ -69,9 +69,9 @@ const DummyTicketSchema = mongoose.Schema(
       enum: ['2 Days', '7 Days', '14 Days'],
       default: '2 Days',
     },
-    ticketAvailability: {
+    ticketDelivery: {
       immediate: { type: Boolean },
-      receiptDate: { type: String },
+      deliveryDate: { type: String },
     },
     flightDetails: {
       departureFlight: FlightSchema,

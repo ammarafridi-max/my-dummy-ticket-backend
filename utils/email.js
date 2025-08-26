@@ -117,8 +117,8 @@ const adminFormSubmissionEmail = async ({
   message,
   flightDetails,
   ticketValidity,
-  ticketAvailability,
-  ticketAvailabilityDate,
+  ticketDelivery,
+  ticketDeliveryDate,
 }) => {
   const leadPassenger = `${passengers[0].firstName} ${passengers[0].lastName}`;
   const passengerList = passengers
@@ -130,10 +130,12 @@ const adminFormSubmissionEmail = async ({
     )
     .join('');
 
+  // if (process.env.NODE_ENV === 'development') return;
+
   await transporter.sendMail({
     from: `My Dummy Ticket <${process.env.SENDER_EMAIL}>`,
     to: `${process.env.SENDER_EMAIL}`,
-    subject: `${leadPassenger} just submitted a form on MyDummyTicket.ae`,
+    subject: `${!ticketDelivery && `(${formatDate(ticketDeliveryDate)})`} ${leadPassenger} just submitted a form on MyDummyTicket.ae`,
     html: `
       <!DOCTYPE html>
       <html lang="en">
@@ -289,7 +291,7 @@ const adminFormSubmissionEmail = async ({
               </tr>
               <tr>
                 <td><strong>Departure Flight:</strong></td>
-                <td><p>${flightDetails?.departureFlight}</p></td>
+                <td><p>${flightDetails?.departureFlight?.segments[0].carrierCode} ${flightDetails?.departureFlight?.segments[0].flightNumber}</p></td>
               </tr>
               <tr>
                 <td><strong>Returning On:</strong></td>
@@ -297,7 +299,7 @@ const adminFormSubmissionEmail = async ({
               </tr>
               <tr>
                 <td><strong>Return Flight:</strong></td>
-                <td><p>${type === 'Return' ? `${flightDetails?.returnFlight}` : `Not Specified`}</p></td>
+                <td><p>${type === 'Return' ? `${flightDetails?.returnFlight?.segments[0].carrierCode} ${flightDetails?.returnFlight?.segments[0].flightNumber}` : ``}</p></td>
               </tr>
               ${
                 message
@@ -315,15 +317,14 @@ const adminFormSubmissionEmail = async ({
               </tr>
               <tr>
                 <td><strong>Ticket Availability:</strong></td>
-                <td><p>${ticketAvailability ? 'Immediate' : 'Later'}</p></td>
+                <td><p>${ticketDelivery ? 'Immediate' : 'Later'}</p></td>
               </tr>
-
               ${
-                ticketAvailabilityDate !== null
+                ticketDeliveryDate !== null
                   ? `
               <tr>
                 <td><strong>Ticket Receipt Date:</strong></td>
-                <td><p>${formatDate(ticketAvailabilityDate)}</p></td>
+                <td><p>${formatDate(ticketDeliveryDate)}</p></td>
               </tr>
               `
                   : ''
@@ -350,6 +351,7 @@ const adminPaymentCompletionEmail = async ({
   departureDate,
   returnDate,
 }) => {
+  if (process.env.NODE_ENV === 'development') return;
   await transporter.sendMail({
     from: `My Dummy Ticket <${process.env.SENDER_EMAIL}>`,
     to: process.env.SENDER_EMAIL,
@@ -362,8 +364,8 @@ const laterDateDeliveryEmail = async ({ to, passenger, deliveryDate }) => {
   await transporter.sendMail({
     from: `My Dummy Ticket <${process.env.SENDER_EMAIL}>`,
     to,
-    subject: `Your flight reservation will be delivered on ${deliveryDate}`,
-    text: `Hi ${passenger},\n\nThank you for booking your dummy ticket with My Dummy Ticket.\n\nSince you chose to receive your dummy ticket on ${deliveryDate}, your dummy ticket will be sent to your email address on the selected date.\n\nIf you accidentally selected the later date delivery option, please reply to this email and we'll create and send your dummy ticket as soon as possible.\n\nBest regards,\nMy Dummy Ticket team\nwww.mydummyticket.ae`,
+    subject: `Your flight reservation will be delivered on ${formatDate(deliveryDate)}`,
+    text: `Hi ${passenger},\n\nThank you for booking your dummy ticket with My Dummy Ticket.\n\nSince you chose to receive your dummy ticket on ${formatDate(deliveryDate)}, your dummy ticket will be sent to your email address on the selected date.\n\nIf you accidentally selected the later date delivery option or want your dummy ticket to be issued and delivery now, please reply to this email and we'll create and send your dummy ticket as soon as possible.\n\nBest regards,\nMy Dummy Ticket team\nwww.mydummyticket.ae`,
   });
 };
 
