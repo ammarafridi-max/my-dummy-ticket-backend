@@ -233,8 +233,8 @@ exports.stripePaymentWebhook = async (req, res, next) => {
       to: session.metadata.arrivalCity || 'Not specified',
       departureDate: session.metadata.departureDate || 'Not specified',
       returnDate: session.metadata.returnDate || 'Not specified',
-      email: session.metadata.customer_email || 'Not specified',
       customer: session.metadata.customer || 'Not specified',
+      email: session.customer_email || 'Not specified',
     });
 
     // await sendEmail(
