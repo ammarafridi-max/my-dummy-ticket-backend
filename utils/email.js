@@ -293,14 +293,37 @@ const adminFormSubmissionEmail = async ({
                 <td><strong>Departure Flight:</strong></td>
                 <td><p>${flightDetails?.departureFlight?.segments[0].carrierCode} ${flightDetails?.departureFlight?.segments[0].flightNumber}</p></td>
               </tr>
-              <tr>
-                <td><strong>Returning On:</strong></td>
-                <td><p>${returnDate === 'Invalid Date' ? 'Not Specified' : formatDate(returnDate)}</p></td>
-              </tr>
-              <tr>
-                <td><strong>Return Flight:</strong></td>
-                <td><p>${type === 'Return' ? `${flightDetails?.returnFlight?.segments[0].carrierCode} ${flightDetails?.returnFlight?.segments[0].flightNumber}` : ``}</p></td>
-              </tr>
+              ${
+                type === 'Return' ? (
+                  <tr>
+                    <td>
+                      <strong>Returning On: </strong>
+                    </td>
+                    <td>
+                      <p>{formatDate(returnDate)}</p>
+                    </td>
+                  </tr>
+                ) : (
+                  ''
+                )
+              }
+              ${
+                type === 'Return' ? (
+                  <tr>
+                    <td>
+                      <strong>Return Flight: </strong>
+                    </td>
+                    <td>
+                      <p>
+                        {flightDetails?.returnFlight?.segments[0].carrierCode}{' '}
+                        {flightDetails?.returnFlight?.segments[0].flightNumber}
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  ''
+                )
+              }
               ${
                 message
                   ? `
