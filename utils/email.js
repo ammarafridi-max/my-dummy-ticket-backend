@@ -135,7 +135,7 @@ const adminFormSubmissionEmail = async ({
   await transporter.sendMail({
     from: `My Dummy Ticket <${process.env.SENDER_EMAIL}>`,
     to: `${process.env.SENDER_EMAIL}`,
-    subject: `${!ticketDelivery && `(${formatDate(ticketDeliveryDate)})`} ${leadPassenger} just submitted a form on MyDummyTicket.ae`,
+    subject: `${!ticketDelivery ? `(${formatDate(ticketDeliveryDate)}) ` : ''}${leadPassenger} just submitted a form on MyDummyTicket.ae`,
     html: `
       <!DOCTYPE html>
       <html lang="en">
