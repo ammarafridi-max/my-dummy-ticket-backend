@@ -371,7 +371,7 @@ const laterDateDeliveryEmail = async ({ to, passenger, deliveryDate }) => {
     from: `My Dummy Ticket <${process.env.SENDER_EMAIL}>`,
     to,
     subject: `Your flight reservation will be delivered on ${formatDate(deliveryDate)}`,
-    text: `Hi ${passenger},\n\nThank you for booking your dummy ticket with My Dummy Ticket.\n\nSince you chose to receive your dummy ticket on ${formatDate(deliveryDate)}, your dummy ticket will be sent to your email address on the selected date.\n\nIf you accidentally selected the later date delivery option or want your dummy ticket to be issued and delivery now, please reply to this email and we'll create and send your dummy ticket as soon as possible.\n\nBest regards,\nMy Dummy Ticket team\nwww.mydummyticket.ae`,
+    text: `Hi ${passenger},\n\nThank you for booking your dummy ticket with My Dummy Ticket.\n\Your flight reservation will be sent to your email address as per your requested date on ${formatDate(deliveryDate)}.\n\nIf you accidentally selected the later date delivery option and want your dummy ticket to be issued now, please reply to this email and we'll issue and send your dummy ticket as soon as possible.\n\nBest regards,\nMy Dummy Ticket team\nwww.mydummyticket.ae`,
   });
 };
 

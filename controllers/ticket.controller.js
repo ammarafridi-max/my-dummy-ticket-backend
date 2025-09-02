@@ -121,7 +121,7 @@ exports.getTicket = catchAsync(async (req, res) => {
   });
 });
 
-exports.updateStatus = catchAsync(async (req, res, next) => {
+exports.updateOrderStatus = catchAsync(async (req, res, next) => {
   const { userId, orderStatus } = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(userId)) {

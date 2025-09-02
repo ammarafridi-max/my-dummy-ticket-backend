@@ -84,7 +84,7 @@ const DummyTicketSchema = mongoose.Schema(
     },
     orderStatus: {
       type: String,
-      enum: ['PENDING', 'DELIVERED', 'CONTACTED'],
+      enum: ['PENDING', 'DELIVERED', 'PROGRESS'],
     },
     handledBy: { type: mongoose.Schema.ObjectId, ref: 'User', default: null },
   },
