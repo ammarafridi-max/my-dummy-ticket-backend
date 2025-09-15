@@ -47,12 +47,12 @@ exports.login = catchAsync(async (req, res, next) => {
     return next(new AppError('User does not exist', 404));
   }
 
+  if (user.status === 'INACTIVE')
+    return next(new AppError('User does not exist.', 404));
+
   if (!(await user.correctPassword(password, user.password))) {
     return next(new AppError('Incorrect password.', 401));
   }
-
-  if (user.status === 'INACTIVE')
-    return next(new AppError('User does not exist.', 404));
 
   createSendToken(user, 200, res);
 });
