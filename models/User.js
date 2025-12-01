@@ -24,21 +24,11 @@ const userSchema = mongoose.Schema({
     required: [true, 'Password is required'],
     minLength: [8, 'Password must be at least 8 characters long.'],
   },
-  passwordConfirm: {
-    type: String,
-    required: [true, 'Password confirm is required'],
-    validate: {
-      validator: function (el) {
-        return this.isNew ? el === this.password : true;
-      },
-      message: 'Passwords do not match',
-    },
-  },
   role: {
     type: String,
     lowercase: true,
     default: 'agent',
-    enum: ['admin', 'agent'],
+    enum: ['admin', 'agent', 'blog-manager'],
     required: [true, 'Role is required'],
   },
   status: {
@@ -52,7 +42,6 @@ const userSchema = mongoose.Schema({
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   this.password = await bcrypt.hash(this.password, 12);
-  this.passwordConfirm = undefined;
   next();
 });
 

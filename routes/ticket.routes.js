@@ -1,11 +1,12 @@
 require('dotenv').config();
 const express = require('express');
 const ticketController = require('../controllers/ticket.controller');
+const { protect, restrictTo } = require('../controllers/auth.controller');
 const router = express.Router();
 
 router
   .route('/')
-  .get(ticketController.getAllTickets)
+  .get(protect, restrictTo('admin', 'agent'), ticketController.getAllTickets)
   .post(ticketController.createTicketRequest);
 
 router.post('/buy-ticket', ticketController.createStripePaymentUrl);
@@ -13,10 +14,14 @@ router.post('/buy-ticket', ticketController.createStripePaymentUrl);
 router
   .route('/:sessionId')
   .get(ticketController.getTicket)
-  .delete(ticketController.deleteTicket);
+  .delete(protect, restrictTo('admin', 'agent'), ticketController.deleteTicket);
 
 router
   .route('/:sessionId/updateOrderStatus')
-  .patch(ticketController.updateOrderStatus);
+  .patch(
+    protect,
+    restrictTo('admin', 'agent'),
+    ticketController.updateOrderStatus
+  );
 
 module.exports = router;

@@ -130,7 +130,7 @@ const adminFormSubmissionEmail = async ({
     )
     .join('');
 
-  // if (process.env.NODE_ENV === 'development') return;
+  if (process.env.NODE_ENV === 'development') return;
 
   await transporter.sendMail({
     from: `My Dummy Ticket <${process.env.SENDER_EMAIL}>`,

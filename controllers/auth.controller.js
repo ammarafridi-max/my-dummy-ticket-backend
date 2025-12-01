@@ -28,31 +28,25 @@ const createSendToken = (user, statusCode, res) => {
 
   res.status(statusCode).json({
     status: 'success',
-    token,
     data: userObj,
   });
 };
 
 exports.login = catchAsync(async (req, res, next) => {
-  const { username, password } = req.body;
+  const { email, password } = req.body;
 
-  if (!username || !password)
-    return res
-      .status(400)
-      .json({ message: 'Username and password are required' });
+  if (!email || !password)
+    return res.status(400).json({ message: 'Email and password are required' });
 
-  const user = await User.findOne({ username }).select('+password');
+  const user = await User.findOne({ email }).select('+password');
 
-  if (!user) {
-    return next(new AppError('User does not exist', 404));
-  }
+  if (!user) return next(new AppError('User does not exist', 404));
 
-  if (user.status === 'INACTIVE')
-    return next(new AppError('User does not exist.', 404));
+  const correct = await user.correctPassword(password, user.password);
 
-  if (!(await user.correctPassword(password, user.password))) {
-    return next(new AppError('Incorrect password.', 401));
-  }
+  if (!correct) return next(new AppError('Incorrect password.', 401));
+
+  // if (!user.isActive) return next(new AppError('User does not exist.', 404));
 
   createSendToken(user, 200, res);
 });
@@ -68,19 +62,11 @@ exports.logout = catchAsync(async (req, res, next) => {
 });
 
 exports.protect = catchAsync(async (req, res, next) => {
-  let token;
+  let token = req.cookies.jwt;
 
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
-    token = req.headers.authorization.split(' ')[1];
-  } else if (req.cookies.jwt) {
-    token = req.cookies.jwt;
-  }
-
-  if (!token)
+  if (!token || token === 'loggedout') {
     return next(new AppError('You need to login to access this route.', 401));
+  }
 
   const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
 

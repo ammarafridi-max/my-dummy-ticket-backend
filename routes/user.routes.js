@@ -3,9 +3,6 @@ const userController = require('../controllers/user.controller');
 const authController = require('../controllers/auth.controller');
 const router = express.Router();
 
-router.route('/login').post(authController.login);
-router.route('/logout').get(authController.logout);
-
 router.use(authController.protect);
 router.get('/myAccount', authController.currentUserInfo);
 router.patch('/updateMyAccount', authController.updateCurrentUser);

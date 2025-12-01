@@ -83,29 +83,3 @@ exports.deleteUser = catchAsync(async (req, res, next) => {
     message: `User ${username} deleted successfully`,
   });
 });
-
-exports.login = async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    const user = await User.findOne({ username: username });
-    if (!user) {
-      return res
-        .status(404)
-        .json({ status: 'failed', message: 'User not found' });
-    }
-    const match = await bcrypt.compare(password, user.password);
-    if (!match)
-      return res
-        .status(401)
-        .json({ status: 'failed', message: 'Wrong password' });
-    res.status(200).json({
-      status: 'success',
-      message: 'Authentication successful',
-      data: user,
-    });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ status: 'fail', message: 'Server error. Could not login.' });
-  }
-};
