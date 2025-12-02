@@ -8,7 +8,7 @@ const {
   updateBlogPost,
   deleteBlogPost,
 } = require('../controllers/blog.controller');
-const { protect, restrictTo } = require('../controllers/auth.controller'); // if you have these
+const { protect, restrictTo } = require('../controllers/auth.controller');
 
 const upload = multer({ storage: multer.memoryStorage() });
 

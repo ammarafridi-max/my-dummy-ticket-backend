@@ -49,7 +49,7 @@ const DummyTicketSchema = mongoose.Schema(
       code: { type: String },
       digits: { type: String },
     },
-    pnr: { type: String, unique: true },
+    pnr: { type: String },
     from: { type: String, required: true },
     to: { type: String, required: true },
     departureDate: { type: String, required: true },
@@ -63,6 +63,7 @@ const DummyTicketSchema = mongoose.Schema(
     paymentStatus: {
       type: String,
       enum: ['UNPAID', 'PAID'],
+      default: 'UNPAID',
     },
     ticketValidity: {
       type: String,
@@ -103,6 +104,11 @@ DummyTicketSchema.virtual('leadPassenger').get(function () {
   }
   return null;
 });
+
+DummyTicketSchema.index({ createdAt: -1 });
+DummyTicketSchema.index({ email: 1 });
+DummyTicketSchema.index({ orderStatus: 1 });
+DummyTicketSchema.index({ paymentStatus: 1 });
 
 const DummyTicket = mongoose.model('dummyTicket', DummyTicketSchema);
 

@@ -6,7 +6,9 @@ const handleCastErrorDB = (err) => {
 };
 
 const handleDuplicateFieldsDB = (err) => {
-  const message = `Duplicate fields detected. Either the username or the email is already in use.`;
+  const field = Object.keys(err.keyValue)[0];
+  const value = err.keyValue[field];
+  const message = `Duplicate field: ${field} (${value}). Please use another value.`;
   return new AppError(message, 400);
 };
 
@@ -16,13 +18,10 @@ const handleValidationErrorDB = (err) => {
   return new AppError(message, 400);
 };
 
-const handleJWTError = () => {
-  return new AppError('Invalid token. Please log in again!', 401);
-};
-
-const handleJWTExpiredError = () => {
-  return new AppError('Your token has expired! Please log in again.', 401);
-};
+const handleJWTError = () =>
+  new AppError('Invalid token. Please log in again!', 401);
+const handleJWTExpiredError = () =>
+  new AppError('Your token has expired! Please log in again.', 401);
 
 const sendErrorDev = (err, res) => {
   res.status(err.statusCode).json({
@@ -40,6 +39,7 @@ const sendErrorProd = (err, res) => {
       message: err.message,
     });
   } else {
+    console.error('ERROR 💥:', err);
     res.status(500).json({
       status: 'error',
       message: 'Something went very wrong!',
@@ -53,12 +53,15 @@ module.exports = (err, req, res, next) => {
 
   if (process.env.NODE_ENV === 'development') {
     return sendErrorDev(err, res);
-  } else if (process.env.NODE_ENV === 'production') {
-    let error = { ...err, message: err.message };
+  }
 
-    if (error.kind === 'ObjectId') error = handleCastErrorDB(error);
+  if (process.env.NODE_ENV === 'production') {
+    let error = Object.assign({}, err);
+    error.message = err.message;
+
+    if (error.name === 'CastError') error = handleCastErrorDB(error);
     if (error.code === 11000) error = handleDuplicateFieldsDB(error);
-    if (error._message === 'user validation failed')
+    if (error.name === 'ValidationError')
       error = handleValidationErrorDB(error);
     if (error.name === 'JsonWebTokenError') error = handleJWTError();
     if (error.name === 'TokenExpiredError') error = handleJWTExpiredError();

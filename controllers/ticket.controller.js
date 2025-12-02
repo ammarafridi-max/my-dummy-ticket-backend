@@ -107,12 +107,13 @@ exports.getAllTickets = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.getTicket = catchAsync(async (req, res) => {
+exports.getTicket = catchAsync(async (req, res, next) => {
   const data = await DummyTicket.findOne({
     sessionId: req.params.sessionId,
   }).populate({ path: 'handledBy' });
 
-  if (!data) throw new AppError('Ticket details could not be found', 404);
+  if (!data)
+    return next(new AppError('Ticket details could not be found', 404));
 
   return res.status(200).json({
     status: 'success',
@@ -179,7 +180,10 @@ exports.createTicketRequest = catchAsync(async (req, res) => {
     submittedOn: result.createdAt,
     ticketCount: totalQuantity,
     passengers: result.passengers,
-    number: result.phoneNumber.code + result.phoneNumber.digits,
+    number:
+      result.phoneNumber?.code && result.phoneNumber?.digits
+        ? result.phoneNumber.code + result.phoneNumber.digits
+        : 'Not provided',
     email: result.email,
     departureDate: result.departureDate,
     returnDate: result.returnDate,
@@ -198,7 +202,7 @@ exports.createTicketRequest = catchAsync(async (req, res) => {
   });
 });
 
-exports.createStripePaymentUrl = catchAsync(async (req, res) => {
+exports.createStripePaymentUrl = catchAsync(async (req, res, next) => {
   const stripeSession = await stripe.createCheckoutSession(
     req.body,
     req.body.sessionId
@@ -213,7 +217,7 @@ exports.createStripePaymentUrl = catchAsync(async (req, res) => {
   });
 });
 
-exports.stripePaymentWebhook = async (req, res, next) => {
+exports.stripePaymentWebhook = catchAsync(async (req, res, next) => {
   const event = await stripe.verifyStripeSignature(req);
 
   if (!event) {
@@ -241,6 +245,11 @@ exports.stripePaymentWebhook = async (req, res, next) => {
       { new: true }
     );
 
+    if (!doc) {
+      console.error(`No DummyTicket found for sessionId ${sessionId}`);
+      return res.status(200).json({ received: true });
+    }
+
     if (!doc.ticketDelivery.immediate) {
       await laterDateDeliveryEmail({
         to: doc.email,
@@ -261,7 +270,9 @@ exports.stripePaymentWebhook = async (req, res, next) => {
 
     return res.status(200).json({ received: true });
   }
-};
+
+  return res.status(200).json({ received: true });
+});
 
 async function updatePayment(sessionId, currency, amount) {
   let doc = await DummyTicket.findOneAndUpdate(

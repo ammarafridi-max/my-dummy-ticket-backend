@@ -11,77 +11,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Function to send an email
-const sendEmail = async (to, subject, htmlContent) => {
-  const mailOptions = {
-    from: process.env.SENDER_EMAIL,
-    to,
-    subject,
-    html: htmlContent,
-  };
-
-  try {
-    if (process.env.NODE_ENV === 'production') {
-      const res = await transporter.sendMail(mailOptions);
-      return res;
-    }
-  } catch (error) {
-    console.error('Error sending email:', error);
-    return null;
-  }
-};
-
-// Function to generate email templates
-const generateEmailTemplate = (templateType, templateData) => {
-  switch (templateType) {
-    case 'adminPaymentNotification':
-      return adminPaymentNotificationTemplate(templateData);
-    default:
-      return '';
-  }
-};
-
-// Template for admin payment notification email
-const adminPaymentNotificationTemplate = ({
-  customer,
-  email,
-  ticketType,
-  departureCity,
-  arrivalCity,
-  departureDate,
-  returnDate,
-}) => {
-  return `
-<!DOCTYPE html>
-  <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Payment Confirmation</title>
-    </head>
-    <body>
-      <div>
-
-        <p>Dear Admin,</p>
-        <p>A payment has been successfully processed for a recent booking. Here are the details:</p>
-    
-        <p>Ticket Type: ${ticketType}</p>
-        <p>Name: ${customer}</p>
-        <p>Email: ${email}</p>
-        <p>From: ${departureCity}</p>
-        <p>To: ${arrivalCity}</p>
-        <p>Departure Date: ${formatDate(departureDate)}</p>
-        <p>Return Date: ${returnDate && formatDate(returnDate)}</p>
-      
-        <p>Best regards,</p>
-        <p>My Dummy Ticket</p>
-      </div>
-    </body>
-  </html>
-
-  `;
-};
-
 const sendEmailWithAttachment = async (
   to,
   subject,
@@ -291,7 +220,7 @@ const adminFormSubmissionEmail = async ({
               </tr>
               <tr>
                 <td><strong>Departure Flight:</strong></td>
-                <td><p>${flightDetails?.departureFlight?.segments[0].carrierCode} ${flightDetails?.departureFlight?.segments[0].flightNumber}</p></td>
+                <td><p>${flightDetails?.departureFlight?.segments[0]?.carrierCode || ''} ${flightDetails?.departureFlight?.segments[0]?.flightNumber || ''}</p></td>
               </tr>
               ${
                 type === 'Return'
@@ -302,7 +231,7 @@ const adminFormSubmissionEmail = async ({
                     </tr>
                     <tr>
                       <td><strong>Return Flight:</strong></td>
-                      <td><p>${flightDetails?.returnFlight?.segments[0].carrierCode} ${flightDetails?.returnFlight?.segments[0].flightNumber}</p></td>
+                      <td><p>${flightDetails?.returnFlight?.segments[0]?.carrierCode || ''} ${flightDetails?.returnFlight?.segments[0]?.flightNumber || ''}</p></td>
                     </tr>
                   `
                   : ''
@@ -362,22 +291,21 @@ const adminPaymentCompletionEmail = async ({
     from: `My Dummy Ticket <${process.env.SENDER_EMAIL}>`,
     to: process.env.SENDER_EMAIL,
     subject: `Payment received by ${customer}`,
-    text: `Dear admin,\n\nPayment has been successfully processed for a recent booking. Details are as follows:\n\nTicket type: ${type}\n\nFrom: ${from} \n\nTo: ${to} \n\nCustomer: ${customer} \n\nEmail: ${email} \n\nDeparture Date: ${formatDate(departureDate)} \n\nReturn Date: ${formatDate(returnDate) || 'Not specified'}`,
+    text: `Dear admin,\n\nPayment has been successfully processed for a recent booking. Details are as follows:\n\nTicket type: ${type}\n\nFrom: ${from} \n\nTo: ${to} \n\nCustomer: ${customer} \n\nEmail: ${email} \n\nDeparture Date: ${formatDate(departureDate)} \n\nReturn Date: ${returnDate ? formatDate(returnDate) : 'Not specified'}`,
   });
 };
 
 const laterDateDeliveryEmail = async ({ to, passenger, deliveryDate }) => {
+  if (process.env.NODE_ENV === 'development') return;
   await transporter.sendMail({
     from: `My Dummy Ticket <${process.env.SENDER_EMAIL}>`,
     to,
     subject: `Your flight reservation will be delivered on ${formatDate(deliveryDate)}`,
-    text: `Hi ${passenger},\n\nThank you for booking your dummy ticket with My Dummy Ticket.\n\Your flight reservation will be sent to your email address as per your requested date on ${formatDate(deliveryDate)}.\n\nIf you accidentally selected the later date delivery option and want your dummy ticket to be issued now, please reply to this email and we'll issue and send your dummy ticket as soon as possible.\n\nBest regards,\nMy Dummy Ticket team\nwww.mydummyticket.ae`,
+    text: `Hi ${passenger},\n\nThank you for booking your dummy ticket with My Dummy Ticket.\n\nYour flight reservation will be sent to your email address as per your requested date on ${formatDate(deliveryDate)}.\n\nIf you accidentally selected the later date delivery option and want your dummy ticket to be issued now, please reply to this email and we'll issue and send your dummy ticket as soon as possible.\n\nBest regards,\nMy Dummy Ticket team\nwww.mydummyticket.ae`,
   });
 };
 
 module.exports = {
-  sendEmail,
-  generateEmailTemplate,
   sendEmailWithAttachment,
   laterDateDeliveryEmail,
   adminFormSubmissionEmail,

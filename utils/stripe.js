@@ -1,8 +1,14 @@
 require('dotenv').config();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const AppError = require('./appError');
 
 async function createCheckoutSession(formData, sessionId) {
   const totalAmount = parseFloat(formData.totalAmount);
+
+  if (!totalAmount || totalAmount <= 0 || isNaN(totalAmount)) {
+    throw new AppError('Invalid total amount for payment', 400);
+  }
+
   const metadata = {
     customer: `${formData.passengers[0].firstName} ${formData.passengers[0].lastName}`,
     ticketType: formData.type,
@@ -13,29 +19,34 @@ async function createCheckoutSession(formData, sessionId) {
     sessionId: sessionId,
   };
 
-  const session = await stripe.checkout.sessions.create({
-    payment_method_types: ['card'],
-    invoice_creation: {
-      enabled: true,
-    },
-    metadata,
-    customer_email: formData.email,
-    line_items: [
-      {
-        price_data: {
-          unit_amount: totalAmount * 100,
-          currency: 'aed',
-          product_data: {
-            name: `${formData.type} Flight Reservation`,
-          },
-        },
-        quantity: 1,
+  const session = await stripe.checkout.sessions.create(
+    {
+      payment_method_types: ['card'],
+      invoice_creation: {
+        enabled: true,
       },
-    ],
-    mode: 'payment',
-    success_url: `${process.env.MDT_FRONTEND}/payment-successful?sessionId=${sessionId}`,
-    cancel_url: `${process.env.MDT_FRONTEND}/booking/review-details`,
-  });
+      metadata,
+      customer_email: formData.email,
+      line_items: [
+        {
+          price_data: {
+            unit_amount: totalAmount * 100,
+            currency: 'aed',
+            product_data: {
+              name: `${formData.type} Flight Reservation`,
+            },
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: `${process.env.MDT_FRONTEND}/payment-successful?sessionId=${sessionId}`,
+      cancel_url: `${process.env.MDT_FRONTEND}/booking/review-details`,
+    },
+    {
+      idempotencyKey: sessionId,
+    }
+  );
 
   return session;
 }
