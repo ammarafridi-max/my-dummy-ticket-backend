@@ -4,3 +4,4 @@
 .env.development
 package-lock.json
 migration.js
+.cursorignore
