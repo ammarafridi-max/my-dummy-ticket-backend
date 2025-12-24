@@ -5,8 +5,8 @@ module.exports = (req, res, next) => {
     for (let key in req.body) {
       if (typeof req.body[key] === 'string') {
         req.body[key] = sanitizeHtml(req.body[key], {
-          allowedTags: [], // remove all HTML tags
-          allowedAttributes: {}, // remove all attributes
+          allowedTags: [],
+          allowedAttributes: {},
         });
       }
     }
