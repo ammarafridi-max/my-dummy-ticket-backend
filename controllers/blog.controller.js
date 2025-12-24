@@ -2,27 +2,11 @@ const Blog = require('../models/Blog');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 const slugify = require('slugify');
-const {
-  uploadImageToCloudinary,
-  deleteCloudinaryFolder,
-} = require('../utils/cloudinary');
-const {
-  generateUniqueSlug,
-  estimateReadingTime,
-} = require('../utils/blogHelper');
+const { uploadImageToCloudinary, deleteCloudinaryFolder } = require('../utils/cloudinary');
+const { generateUniqueSlug, estimateReadingTime } = require('../utils/blogHelper');
 
 exports.createBlogPost = catchAsync(async (req, res, next) => {
-  const {
-    title,
-    slug: customSlug,
-    content,
-    excerpt,
-    status,
-    tags,
-    metaTitle,
-    metaDescription,
-    author,
-  } = req.body;
+  const { title, slug: customSlug, content, excerpt, status, tags, metaTitle, metaDescription, author } = req.body;
 
   if (!title || !content) {
     return next(new AppError('Title and content are required', 400));
