@@ -14,15 +14,11 @@ const createSendToken = (user, statusCode, res) => {
   const token = signToken(user._id, user.role);
 
   const cookieOptions = {
-    expires: new Date(
-      Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
-    ),
     httpOnly: true,
     sameSite: 'none',
-    secure: process.env.NODE_ENV === 'production' ? true : true,
+    secure: true,
+    expires: new Date(Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000),
   };
-
-  if (process.env.NODE_ENV === 'production') cookieOptions.secure = true;
 
   res.cookie('jwt', token, cookieOptions);
 
@@ -38,13 +34,14 @@ const createSendToken = (user, statusCode, res) => {
 exports.login = catchAsync(async (req, res, next) => {
   const { email, password } = req.body;
 
-  if (!email || !password)
-    return next(new AppError('Email and password are required', 400));
+  if (!email || !password) return next(new AppError('Email and password are required', 400));
 
   const user = await User.findOne({ email }).select('+password');
+
   if (!user) return next(new AppError('User does not exist', 404));
 
   const correct = await user.correctPassword(password, user.password);
+
   if (!correct) return next(new AppError('Incorrect password.', 401));
 
   createSendToken(user, 200, res);
@@ -75,9 +72,7 @@ exports.protect = catchAsync(async (req, res, next) => {
 
   const currentUser = await User.findById(decoded.id);
   if (!currentUser || currentUser.status === 'INACTIVE') {
-    return next(
-      new AppError('The user belonging to this token does not exist.', 401)
-    );
+    return next(new AppError('The user belonging to this token does not exist.', 401));
   }
 
   req.user = currentUser;
@@ -88,9 +83,7 @@ exports.protect = catchAsync(async (req, res, next) => {
 exports.restrictTo = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
-      return next(
-        new AppError('You do not have permission to perform this action', 403)
-      );
+      return next(new AppError('You do not have permission to perform this action', 403));
     }
     next();
   };
@@ -99,12 +92,8 @@ exports.restrictTo = (...roles) => {
 exports.updatePassword = catchAsync(async (req, res, next) => {
   const user = await User.findById(req.user.id).select('+password');
 
-  const correct = await user.correctPassword(
-    req.body.passwordCurrent,
-    user.password
-  );
-  if (!correct)
-    return next(new AppError('Current password entered is wrong.', 401));
+  const correct = await user.correctPassword(req.body.passwordCurrent, user.password);
+  if (!correct) return next(new AppError('Current password entered is wrong.', 401));
 
   user.password = req.body.password;
   await user.save();
@@ -114,10 +103,7 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
 
 exports.currentUserInfo = catchAsync(async (req, res, next) => {
   const user = await User.findById(req.user.id);
-  if (!user)
-    return next(
-      new AppError('Your data was not found. Please try again later.', 404)
-    );
+  if (!user) return next(new AppError('Your data was not found. Please try again later.', 404));
 
   res.status(200).json({
     status: 'success',
@@ -127,10 +113,7 @@ exports.currentUserInfo = catchAsync(async (req, res, next) => {
 });
 
 exports.updateCurrentUser = catchAsync(async (req, res, next) => {
-  if (req.body.password)
-    return next(
-      new AppError('Please use /updateMyPassword to change password', 403)
-    );
+  if (req.body.password) return next(new AppError('Please use /updateMyPassword to change password', 403));
 
   const updatedUser = await User.findByIdAndUpdate(req.user.id, req.body, {
     new: true,
