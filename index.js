@@ -23,34 +23,29 @@ process.on('uncaughtException', (err) => {
 
 const app = express();
 
+app.post('/api/ticket/webhook', express.raw({ type: 'application/json' }), stripePaymentWebhook);
+
 app.use(
   cors({
-    origin: [
-      'http://localhost:5173',
-      'https://www.mydummyticket.ae',
-      'https://admin.mydummyticket.ae',
-    ],
+    origin: ['http://localhost:5173', 'https://www.mydummyticket.ae', 'https://admin.mydummyticket.ae'],
     credentials: true,
-    methods: 'GET,POST,PATCH,DELETE,OPTIONS',
-  })
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Set-Cookie'],
+  }),
 );
 
 app.use(
   helmet({
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
-  })
+  }),
 );
 
 app.use(compression());
 app.use(cookieParser());
-
-app.use((req, res, next) => {
-  if (req.originalUrl === '/api/ticket/webhook') return next();
-  express.json({ limit: '50mb' })(req, res, next);
-});
-
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(mongoSanitize());
 
 app.use(
@@ -59,13 +54,7 @@ app.use(
     max: 500,
     windowMs: 60 * 60 * 1000,
     message: 'Too many requests from this IP, please try again in an hour!',
-  })
-);
-
-app.post(
-  '/api/ticket/webhook',
-  express.raw({ type: 'application/json' }),
-  stripePaymentWebhook
+  }),
 );
 
 app.use('/api', indexRoutes);
@@ -77,7 +66,7 @@ app.use('/api', indexRoutes);
       setHeaders: (res) => {
         res.set('Cross-Origin-Resource-Policy', 'cross-origin');
       },
-    })
+    }),
   );
 });
 
@@ -100,9 +89,7 @@ app.all('*', (req, res, next) => {
 app.use(globalErrorHandler);
 
 const server = app.listen(process.env.PORT || 3001, () => {
-  console.log(
-    `Server running on port ${process.env.PORT || 3001} (${process.env.NODE_ENV})`
-  );
+  console.log(`Server running on port ${process.env.PORT || 3001} (${process.env.NODE_ENV})`);
 });
 
 process.on('unhandledRejection', (err) => {
