@@ -32,14 +32,15 @@ const blogSchema = new mongoose.Schema(
       enum: ['draft', 'published'],
       default: 'draft',
     },
+    author: { type: mongoose.Schema.ObjectId, ref: 'User', default: null },
+    publisher: { type: mongoose.Schema.ObjectId, ref: 'User', default: null },
     tags: [String],
     metaTitle: String,
     metaDescription: String,
-    author: String,
     readingTime: Number,
     publishedAt: Date,
   },
-  { timestamps: true }
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );
 
 module.exports = mongoose.model('Blog', blogSchema);
