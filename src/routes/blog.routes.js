@@ -7,6 +7,7 @@ const {
   getBlogPostById,
   updateBlogPost,
   deleteBlogPost,
+  publishBlog,
 } = require('../controllers/blog.controller');
 const { protect, restrictTo } = require('../controllers/auth.controller');
 
@@ -17,6 +18,7 @@ router.get('/slug/:slug', getBlogPostBySlug);
 
 router.use(protect, restrictTo('admin'));
 router.post('/', upload.single('coverImage'), createBlogPost);
+router.patch('/:id/publish', publishBlog);
 router.get('/:id', getBlogPostById);
 router.patch('/:id', updateBlogPost);
 router.delete('/:id', deleteBlogPost);
