@@ -6,7 +6,8 @@ const { uploadImageToCloudinary, deleteCloudinaryFolder } = require('../utils/cl
 const { generateUniqueSlug, estimateReadingTime } = require('../utils/blogHelper');
 
 exports.createBlogPost = catchAsync(async (req, res, next) => {
-  const { title, slug: customSlug, content, excerpt, status, tags, metaTitle, metaDescription, author } = req.body;
+  const { title, slug: customSlug, content, excerpt, status, tags, metaTitle, metaDescription } = req.body;
+  const authorId = req.user._id;
 
   if (!title || !content) {
     return next(new AppError('Title and content are required', 400));
@@ -36,7 +37,7 @@ exports.createBlogPost = catchAsync(async (req, res, next) => {
 
   const isPublished = status === 'published';
 
-  const blog = await Blog.create({
+  let blog = await Blog.create({
     title,
     slug: uniqueSlug,
     content,
@@ -46,10 +47,10 @@ exports.createBlogPost = catchAsync(async (req, res, next) => {
     tags: normalizedTags,
     metaTitle: metaTitle || title,
     metaDescription,
-    author,
+    author: authorId,
     readingTime,
     publishedAt: isPublished ? new Date() : null,
-  });
+  }).populate('authorDetails');
 
   res.status(201).json({
     status: 'success',
@@ -83,7 +84,7 @@ exports.getBlogPosts = catchAsync(async (req, res, next) => {
   }
 
   const [blogs, total] = await Promise.all([
-    Blog.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Blog.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('author'),
     Blog.countDocuments(filter),
   ]);
 
@@ -143,6 +144,7 @@ exports.updateBlogPost = catchAsync(async (req, res, next) => {
 
 exports.deleteBlogPost = catchAsync(async (req, res, next) => {
   const blog = await Blog.findById(req.params.id);
+
   if (!blog) {
     return next(new AppError('Blog post not found', 404));
   }
@@ -159,5 +161,28 @@ exports.deleteBlogPost = catchAsync(async (req, res, next) => {
   res.status(204).json({
     status: 'success',
     data: null,
+  });
+});
+
+exports.publishBlog = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  const updatedBlog = await Blog.findByIdAndUpdate(
+    id,
+    {
+      status: 'published',
+      publishedAt: new Date(),
+      publisher: req.user._id,
+    },
+    {
+      new: true,
+      runValidators: true,
+    },
+  );
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Blog published successfully',
+    data: updatedBlog,
   });
 });
