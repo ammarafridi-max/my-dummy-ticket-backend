@@ -6,10 +6,9 @@ const cookieParser = require('cookie-parser');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
-
 const { stripePaymentWebhook } = require('./controllers/ticket.controller');
 const AppError = require('./utils/appError');
-const globalErrorHandler = require('./controllers/error.controller');
+const globalErrorHandler = require('./error/error.controller');
 const indexRoutes = require('./routes/index.routes');
 
 const app = express();
