@@ -48,10 +48,7 @@ exports.fetchFlightsList = catchAsync(async (req, res, next) => {
 
   if (!from || !to || !departureDate) {
     return next(
-      new AppError(
-        'Please provide the departure destination, arrival destination, and the departure date',
-        400
-      )
+      new AppError('Please provide the departure destination, arrival destination, and the departure date', 400),
     );
   }
 
@@ -73,25 +70,17 @@ exports.fetchFlightsList = catchAsync(async (req, res, next) => {
 
   let flights = response.data;
 
-  flights = flights.filter(
-    (flight) => flight.itineraries[0].segments.length <= 2
-  );
+  flights = flights.filter((flight) => flight.itineraries[0].segments.length <= 2);
 
-  const airlineCodes = [
-    ...new Set(flights.flatMap((flight) => flight.validatingAirlineCodes)),
-  ];
+  const airlineCodes = [...new Set(flights.flatMap((flight) => flight.validatingAirlineCodes))];
 
   const airlinesInDb = await Airline.find({
     iataCode: { $in: airlineCodes },
   });
 
-  const airlinesInDbMap = new Map(
-    airlinesInDb.map((airline) => [airline.iataCode, airline])
-  );
+  const airlinesInDbMap = new Map(airlinesInDb.map((airline) => [airline.iataCode, airline]));
 
-  const missingAirlineCodes = airlineCodes.filter(
-    (code) => !airlinesInDbMap.has(code)
-  );
+  const missingAirlineCodes = airlineCodes.filter((code) => !airlinesInDbMap.has(code));
 
   let newAirlineDetails = [];
 
@@ -110,14 +99,9 @@ exports.fetchFlightsList = catchAsync(async (req, res, next) => {
     await Airline.insertMany(newAirlineDetails, { ordered: false });
   }
 
-  newAirlineDetails.forEach((detail) =>
-    airlinesInDbMap.set(detail.iataCode, detail)
-  );
+  newAirlineDetails.forEach((detail) => airlinesInDbMap.set(detail.iataCode, detail));
 
-  const flightsWithAirlineDetails = attachAirlineDetails(
-    flights,
-    airlinesInDbMap
-  );
+  const flightsWithAirlineDetails = attachAirlineDetails(flights, airlinesInDbMap);
 
   flightsWithAirlineDetails.sort((a, b) => {
     const aSegments = a.itineraries[0].segments.length;
@@ -149,9 +133,7 @@ function attachAirlineDetails(flights, airlinesMap) {
     return {
       ...flight,
       itineraries: enrichedItineraries,
-      airlineDetails: flight.validatingAirlineCodes.map(
-        (code) => airlinesMap.get(code) || {}
-      ),
+      airlineDetails: flight.validatingAirlineCodes.map((code) => airlinesMap.get(code) || {}),
     };
   });
 }
