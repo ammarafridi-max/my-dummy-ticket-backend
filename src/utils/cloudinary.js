@@ -8,7 +8,6 @@ cloudinary.config({
 
 exports.cloudinary = cloudinary;
 
-// Upload single image buffer
 exports.uploadImageToCloudinary = async (buffer, folder) => {
   return new Promise((resolve, reject) => {
     cloudinary.uploader
@@ -24,17 +23,16 @@ exports.deleteCloudinaryFile = async (imageUrl) => {
   try {
     if (!imageUrl) return;
 
-    const match = imageUrl.match(/upload\/(.+)\.[a-zA-Z]+$/);
+    const match = imageUrl.match(/upload\/(?:v\d+\/)?(.+)\.[a-zA-Z0-9]+$/);
     if (!match || !match[1]) return;
 
     const publicId = match[1];
-    await cloudinary.uploader.destroy(publicId);
+    await cloudinary.uploader.destroy(publicId, { invalidate: true });
   } catch (err) {
     console.error('Failed to delete Cloudinary file:', err.message);
   }
 };
 
-// Delete a whole folder and its contents
 exports.deleteCloudinaryFolder = async (folderPath) => {
   try {
     const { resources } = await cloudinary.api.resources({
