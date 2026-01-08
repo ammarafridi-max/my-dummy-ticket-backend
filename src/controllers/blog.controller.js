@@ -4,7 +4,6 @@ const AppError = require('../utils/appError');
 const { deleteCloudinaryFolder } = require('../utils/cloudinary');
 const {
   validateBlog,
-  createCoverImage,
   generateSlugAndReadingTime,
   normalizeTags,
   saveCoverImage,
@@ -85,7 +84,7 @@ exports.createBlogPost = catchAsync(async (req, res, next) => {
   validateBlog(req);
   const { uniqueSlug, readingTime } = await generateSlugAndReadingTime(customSlug, title, content);
   const normalizedTags = normalizeTags(tags);
-  const coverImageUrl = await createCoverImage(req, uniqueSlug);
+  const coverImageUrl = await saveCoverImage(req, uniqueSlug);
 
   let blog = await Blog.create({
     title,
@@ -99,7 +98,7 @@ exports.createBlogPost = catchAsync(async (req, res, next) => {
     metaDescription,
     author: authorId,
     readingTime,
-    publishedAt: isPublished ? new Date() : null,
+    publishedAt: status === 'published' ? new Date() : null,
   });
 
   await blog.populate('author');
@@ -133,7 +132,7 @@ exports.updateBlogPost = catchAsync(async (req, res, next) => {
 
   updateData = Object.fromEntries(Object.entries(updateData).filter(([_, v]) => v !== undefined));
 
-  updateData.coverImageUrl = await saveCoverImage(req, slug, blog);
+  updateData.coverImageUrl = await saveCoverImage(req, blog.slug, blog);
 
   const updatedBlog = await Blog.findByIdAndUpdate(id, updateData, {
     new: true,
@@ -143,8 +142,7 @@ exports.updateBlogPost = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: 'success',
     message: 'Blog updated successfully',
-    data: 'Hello',
-    updatedBlog,
+    data: updatedBlog,
   });
 });
 
@@ -167,6 +165,36 @@ exports.deleteBlogPost = catchAsync(async (req, res, next) => {
   res.status(204).json({
     status: 'success',
     data: null,
+  });
+});
+
+exports.duplicateBlogPost = catchAsync(async (req, res, next) => {
+  const blog = await Blog.findById(req.params.id);
+
+  if (!blog) {
+    return next(new AppError('Blog post not found', 404));
+  }
+
+  const blogObj = blog.toObject();
+
+  delete blogObj._id;
+  delete blogObj.createdAt;
+  delete blogObj.updatedAt;
+  delete blogObj.publishedAt;
+  delete blogObj.author;
+  delete blogObj.publisher;
+  delete blogObj.__v;
+
+  blogObj.title = `${blogObj.title} Copy`;
+  blogObj.slug = `${blogObj.slug}-copy`;
+  blogObj.status = `draft`;
+
+  const duplicated = await Blog.create(blogObj);
+
+  res.status(201).json({
+    status: 'success',
+    message: 'Blog post duplicated successfully',
+    data: duplicated,
   });
 });
 
