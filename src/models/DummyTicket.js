@@ -94,7 +94,7 @@ const DummyTicketSchema = mongoose.Schema(
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-  }
+  },
 );
 
 DummyTicketSchema.virtual('leadPassenger').get(function () {
