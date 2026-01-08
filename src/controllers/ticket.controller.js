@@ -5,11 +5,7 @@ const stripe = require('../utils/stripe');
 const { v4: uuidv4 } = require('uuid');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
-const {
-  adminFormSubmissionEmail,
-  adminPaymentCompletionEmail,
-  laterDateDeliveryEmail,
-} = require('../utils/email');
+const { adminFormSubmissionEmail, adminPaymentCompletionEmail, laterDateDeliveryEmail } = require('../utils/email');
 
 exports.getAllTickets = catchAsync(async (req, res, next) => {
   const queryObj = { ...req.query };
@@ -21,7 +17,6 @@ exports.getAllTickets = catchAsync(async (req, res, next) => {
     if (queryObj[key] === 'all') delete queryObj[key];
   });
 
-  // 🔎 Handle search
   let searchFilter = {};
   if (req.query.search) {
     const regex = new RegExp(req.query.search, 'i');
@@ -37,7 +32,6 @@ exports.getAllTickets = catchAsync(async (req, res, next) => {
     };
   }
 
-  // 🔎 Handle createdAt filter
   if (req.query.createdAt) {
     const now = new Date();
     let fromDate;
@@ -112,8 +106,7 @@ exports.getTicket = catchAsync(async (req, res, next) => {
     sessionId: req.params.sessionId,
   }).populate({ path: 'handledBy' });
 
-  if (!data)
-    return next(new AppError('Ticket details could not be found', 404));
+  if (!data) return next(new AppError('Ticket details could not be found', 404));
 
   return res.status(200).json({
     status: 'success',
@@ -131,13 +124,10 @@ exports.updateOrderStatus = catchAsync(async (req, res, next) => {
 
   const data = await DummyTicket.findOneAndUpdate(
     { sessionId: req.params.sessionId },
-    { $set: { orderStatus, handledBy: new mongoose.Types.ObjectId(userId) } }
+    { $set: { orderStatus, handledBy: new mongoose.Types.ObjectId(userId) } },
   ).populate('handledBy');
 
-  if (!data)
-    return next(
-      new AppError('Could not find dummy ticket with that sessionId', 404)
-    );
+  if (!data) return next(new AppError('Could not find dummy ticket with that sessionId', 404));
 
   res.status(200).json({
     status: 'success',
@@ -170,8 +160,7 @@ exports.createTicketRequest = catchAsync(async (req, res) => {
   // 1. Upload data to DB
   const result = await DummyTicket.create(data);
 
-  const totalQuantity =
-    result.quantity.adults + result.quantity.children + result.quantity.infants;
+  const totalQuantity = result.quantity.adults + result.quantity.children + result.quantity.infants;
 
   await adminFormSubmissionEmail({
     type: result.type,
@@ -189,8 +178,8 @@ exports.createTicketRequest = catchAsync(async (req, res) => {
     returnDate: result.returnDate,
     flightDetails: result.flightDetails,
     ticketValidity: result.ticketValidity,
-    ticketDelivery: result.ticketDelivery.immediate,
-    ticketDeliveryDate: result.ticketDelivery.deliveryDate,
+    ticketDelivery: result?.ticketDelivery?.immediate,
+    ticketDeliveryDate: result?.ticketDelivery?.deliveryDate,
     message: result.message,
   });
 
@@ -203,13 +192,9 @@ exports.createTicketRequest = catchAsync(async (req, res) => {
 });
 
 exports.createStripePaymentUrl = catchAsync(async (req, res, next) => {
-  const stripeSession = await stripe.createCheckoutSession(
-    req.body,
-    req.body.sessionId
-  );
+  const stripeSession = await stripe.createCheckoutSession(req.body, req.body.sessionId);
 
-  if (!stripeSession)
-    return next(new AppError('Stripe session not found', 404));
+  if (!stripeSession) return next(new AppError('Stripe session not found', 404));
 
   return res.status(200).json({
     message: 'successfully created ticket',
@@ -242,7 +227,7 @@ exports.stripePaymentWebhook = catchAsync(async (req, res, next) => {
           orderStatus: 'PENDING',
         },
       },
-      { new: true }
+      { new: true },
     );
 
     if (!doc) {
@@ -287,7 +272,7 @@ async function updatePayment(sessionId, currency, amount) {
         orderStatus: 'PENDING',
       },
     },
-    { new: true }
+    { new: true },
   );
 
   if (!doc) throw new Error('Ticket not found for session ID');
@@ -307,14 +292,11 @@ async function updatePayment(sessionId, currency, amount) {
 
 async function createReservation(ticket) {
   try {
-    const res = await fetch(
-      `${process.env.VIEWTRIP_BACKEND}/api/reservations`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(ticket),
-      }
-    );
+    const res = await fetch(`${process.env.VIEWTRIP_BACKEND}/api/reservations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ticket),
+    });
 
     if (!res.ok) throw new Error('Could not create reservation');
 
