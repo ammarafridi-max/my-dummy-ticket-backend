@@ -1,13 +1,14 @@
 const router = require('express').Router();
 const userController = require('../controllers/user.controller');
 const authController = require('../controllers/auth.controller');
+const { protect, restrictTo } = require('../middleware/auth.middleware');
 
-router.use(authController.protect);
+router.use(protect);
 router.get('/myAccount', authController.currentUserInfo);
 router.patch('/updateMyAccount', authController.updateCurrentUser);
 router.patch('/updateMyPassword', authController.updatePassword);
 
-router.use(authController.restrictTo('admin'));
+router.use(restrictTo('admin'));
 router.route('/').get(userController.getUsers).post(userController.createUser);
 router
   .route('/:username')
