@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const ticketController = require('../controllers/ticket.controller');
-const { protect, restrictTo } = require('../controllers/auth.controller');
+const { protect, restrictTo } = require('../middleware/auth.middleware');
 const router = express.Router();
 
 router
@@ -18,10 +18,6 @@ router
 
 router
   .route('/:sessionId/updateOrderStatus')
-  .patch(
-    protect,
-    restrictTo('admin', 'agent'),
-    ticketController.updateOrderStatus
-  );
+  .patch(protect, restrictTo('admin', 'agent'), ticketController.updateOrderStatus);
 
 module.exports = router;
