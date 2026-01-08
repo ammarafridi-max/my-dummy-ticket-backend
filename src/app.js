@@ -18,7 +18,12 @@ app.post('/api/ticket/webhook', express.raw({ type: 'application/json' }), strip
 
 app.use(
   cors({
-    origin: ['http://localhost:5173', 'https://www.mydummyticket.ae', 'https://admin.mydummyticket.ae'],
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'https://www.mydummyticket.ae',
+      'https://admin.mydummyticket.ae',
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Origin', 'x-session-id'],
