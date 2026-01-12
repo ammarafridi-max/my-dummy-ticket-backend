@@ -1,27 +1,36 @@
-require('dotenv').config();
+const AppError = require('./appError');
 const formatDate = require('./formatDate');
 const formatDubaiTime = require('./formatDubaiTime');
 
+const ADMIN_EMAIL = 'info@mydummyticket.ae';
 const BREVO_URL = 'https://api.brevo.com/v3/smtp/email';
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const BREVO_HEADER = { 'Content-Type': 'application/json', Accept: 'application/json', 'api-key': BREVO_API_KEY };
-const BREVO_SENDER = { name: 'My Dummy Ticket', email: 'info@mydummyticket.ae' };
+const BREVO_SENDER = { name: 'My Dummy Ticket', email: ADMIN_EMAIL };
 
 const sendEmail = async ({ email, name, subject, htmlContent, textContent }) => {
-  const res = await fetch(BREVO_URL, {
-    method: 'POST',
-    headers: BREVO_HEADER,
-    body: JSON.stringify({
-      sender: BREVO_SENDER,
-      to: [{ email, name }],
-      subject,
-      textContent,
-      htmlContent,
-    }),
-  });
+  try {
+    const res = await fetch(BREVO_URL, {
+      method: 'POST',
+      headers: BREVO_HEADER,
+      body: JSON.stringify({
+        sender: BREVO_SENDER,
+        to: [{ email, name }],
+        subject,
+        textContent,
+        htmlContent,
+      }),
+    });
 
-  if (!res.ok) {
-    throw new AppError('Could not send email', 400);
+    if (!res.ok) {
+      throw new Error('Brevo email request failed');
+    }
+  } catch (err) {
+    console.error('Email sending failed:', err.message);
+
+    if (process.env.NODE_ENV === 'development') {
+      throw new AppError('Could not send email', 400);
+    }
   }
 };
 
@@ -262,13 +271,13 @@ const adminFormSubmissionEmail = async ({
     </html>
   `;
 
-  await sendEmail({ email: 'info@mydummyticket.ae', name: leadPassenger, subject, htmlContent });
+  await sendEmail({ email: ADMIN_EMAIL, name: leadPassenger, subject, htmlContent });
 };
 
 const adminPaymentCompletionEmail = async ({ type, from, to, customer, email, departureDate, returnDate }) => {
   if (process.env.NODE_ENV === 'development') return;
   await sendEmail({
-    email: 'info@mydummyticket.ae',
+    email: ADMIN_EMAIL,
     name: 'Payments - My Dummy Ticket',
     subject: `Payment received by ${customer}`,
     textContent: `Dear admin,\n\nPayment has been successfully processed for a recent booking. Details are as follows:\n\nTicket type: ${type}\n\nFrom: ${from} \n\nTo: ${to} \n\nCustomer: ${customer} \n\nEmail: ${email} \n\nDeparture Date: ${formatDate(departureDate)} \n\nReturn Date: ${returnDate ? formatDate(returnDate) : 'Not specified'}`,
