@@ -1,68 +1,62 @@
-require('dotenv').config();
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const Stripe = require('stripe');
 const AppError = require('./appError');
 
-async function createCheckoutSession(formData, sessionId) {
-  const totalAmount = parseFloat(formData.totalAmount);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2024-04-10',
+});
 
-  if (!totalAmount || totalAmount <= 0 || isNaN(totalAmount)) {
-    throw new AppError('Invalid total amount for payment', 400);
+async function createCheckoutSession({
+  amount,
+  currency = 'aed',
+  productName,
+  customerEmail,
+  metadata = {},
+  successUrl,
+  cancelUrl,
+  idempotencyKey,
+}) {
+  const totalAmount = Number(amount);
+
+  if (!totalAmount || totalAmount <= 0) {
+    throw new AppError('Invalid payment amount', 400);
   }
 
-  const metadata = {
-    customer: `${formData.passengers[0].firstName} ${formData.passengers[0].lastName}`,
-    ticketType: formData.type,
-    departureCity: formData.from,
-    arrivalCity: formData.to,
-    departureDate: formData.departureDate,
-    returnDate: formData.returnDate,
-    sessionId: sessionId,
-  };
-
-  const session = await stripe.checkout.sessions.create(
+  return stripe.checkout.sessions.create(
     {
       payment_method_types: ['card'],
-      invoice_creation: {
-        enabled: true,
-      },
+      invoice_creation: { enabled: true },
+      customer_email: customerEmail,
       metadata,
-      customer_email: formData.email,
       line_items: [
         {
           price_data: {
-            unit_amount: totalAmount * 100,
-            currency: 'aed',
-            product_data: {
-              name: `${formData.type} Flight Reservation`,
-            },
+            unit_amount: Math.round(totalAmount * 100),
+            currency,
+            product_data: { name: productName },
           },
           quantity: 1,
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.MDT_FRONTEND}/payment-successful?sessionId=${sessionId}`,
-      cancel_url: `${process.env.MDT_FRONTEND}/booking/review-details`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
     },
-    {
-      idempotencyKey: sessionId,
-    }
+    idempotencyKey ? { idempotencyKey } : undefined,
   );
-
-  return session;
 }
 
 function verifyStripeSignature(req) {
   const sig = req.headers['stripe-signature'];
+
   try {
-    return stripe.webhooks.constructEvent(
-      req.body,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
+    return stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
     console.error('❌ Stripe signature verification failed:', err.message);
     return null;
   }
 }
 
-module.exports = { createCheckoutSession, verifyStripeSignature };
+module.exports = {
+  createCheckoutSession,
+  verifyStripeSignature,
+};
