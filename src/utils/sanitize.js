@@ -1,8 +1,9 @@
 const sanitizeHtml = require('sanitize-html');
 
 const richTextFields = ['content', 'body', 'description'];
-
 const richTextRoutes = ['/api/blogs', '/api/articles', '/api/posts'];
+
+const skipFields = ['password', 'passwordCurrent', 'passwordConfirm'];
 
 const richTextOptions = {
   allowedTags: [
@@ -46,20 +47,6 @@ const richTextOptions = {
     th: ['colspan', 'rowspan'],
     '*': ['class', 'id', 'style'],
   },
-  allowedStyles: {
-    '*': {
-      color: [/^#[0-9a-f]{3,6}$/i, /^rgb\(/i, /^rgba\(/i],
-      'background-color': [/^#[0-9a-f]{3,6}$/i, /^rgb\(/i, /^rgba\(/i],
-      'font-size': [/^\d+(?:px|em|rem|%)$/],
-      'font-weight': [/^\d+$/, /^bold$/, /^normal$/],
-      'text-align': [/^left$/, /^right$/, /^center$/, /^justify$/],
-      'text-decoration': [/.*/],
-      'font-style': [/^italic$/, /^normal$/],
-      margin: [/^\d+(?:px|em|rem|%)$/],
-      padding: [/^\d+(?:px|em|rem|%)$/],
-      'line-height': [/^\d+(?:\.\d+)?(?:px|em|rem)?$/],
-    },
-  },
   allowedSchemes: ['http', 'https', 'mailto'],
   allowedSchemesByTag: {
     img: ['http', 'https', 'data'],
@@ -74,16 +61,19 @@ const strictOptions = {
 module.exports = (req, res, next) => {
   const isRichTextRoute = richTextRoutes.some((route) => req.originalUrl.startsWith(route));
 
-  if (req.body) {
-    for (let key in req.body) {
-      if (typeof req.body[key] === 'string') {
-        if (isRichTextRoute && richTextFields.includes(key)) {
-          req.body[key] = sanitizeHtml(req.body[key], richTextOptions);
-        } else {
-          req.body[key] = sanitizeHtml(req.body[key], strictOptions);
-        }
-      }
-    }
+  if (!req.body) return next();
+
+  for (const key of Object.keys(req.body)) {
+    const value = req.body[key];
+
+    if (typeof value !== 'string') continue;
+    if (skipFields.includes(key)) continue;
+
+    req.body[key] =
+      isRichTextRoute && richTextFields.includes(key)
+        ? sanitizeHtml(value, richTextOptions)
+        : sanitizeHtml(value, strictOptions);
   }
+
   next();
 };
