@@ -1,42 +1,21 @@
-const Blog = require('../models/Blog');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 const { deleteCloudinaryFolder } = require('../utils/cloudinary');
-const {
-  validateBlog,
-  generateSlugAndReadingTime,
-  normalizeTags,
-  saveCoverImage,
-} = require('../services/blog.services');
+const blogService = require('../services/blog.service');
+const Blog = require('../models/Blog');
 
-exports.getBlogPosts = catchAsync(async (req, res, next) => {
+exports.getBlogPosts = catchAsync(async (req, res) => {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const skip = (page - 1) * limit;
   const { status, tag, search } = req.query;
 
-  const filter = {};
-
-  if (status && status !== 'all') {
-    filter.status = status;
-  }
-
-  if (tag) {
-    filter.tags = tag;
-  }
-
-  if (search) {
-    filter.$or = [
-      { title: new RegExp(search, 'i') },
-      { excerpt: new RegExp(search, 'i') },
-      { content: new RegExp(search, 'i') },
-    ];
-  }
-
-  const [blogs, total] = await Promise.all([
-    Blog.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('author'),
-    Blog.countDocuments(filter),
-  ]);
+  const { blogs, total } = await blogService.getBlogs({
+    page,
+    limit,
+    status,
+    tag,
+    search,
+  });
 
   res.status(200).json({
     status: 'success',
@@ -52,7 +31,7 @@ exports.getBlogPosts = catchAsync(async (req, res, next) => {
 });
 
 exports.getBlogPostBySlug = catchAsync(async (req, res, next) => {
-  const blog = await Blog.findOne({ slug: req.params.slug });
+  const blog = await blogService.getBlogBySlug(req.params.slug);
 
   if (!blog) {
     return next(new AppError('Blog post not found', 404));
@@ -65,7 +44,7 @@ exports.getBlogPostBySlug = catchAsync(async (req, res, next) => {
 });
 
 exports.getBlogPostById = catchAsync(async (req, res, next) => {
-  const blog = await Blog.findById(req.params.id);
+  const blog = await Blog.findById(req.params.id).populate('author');
 
   if (!blog) {
     return next(new AppError('Blog post not found', 404));
@@ -77,16 +56,17 @@ exports.getBlogPostById = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.createBlogPost = catchAsync(async (req, res, next) => {
+exports.createBlogPost = catchAsync(async (req, res) => {
   const { title, slug: customSlug, content, excerpt, status, tags, metaTitle, metaDescription } = req.body;
-  const authorId = req.user._id;
 
-  validateBlog(req);
-  const { uniqueSlug, readingTime } = await generateSlugAndReadingTime(customSlug, title, content);
-  const normalizedTags = normalizeTags(tags);
-  const coverImageUrl = await saveCoverImage(req, uniqueSlug);
+  blogService.validateBlog(req, { requireCoverImage: true });
 
-  let blog = await Blog.create({
+  const { uniqueSlug, readingTime } = await blogService.generateSlugAndReadingTime(customSlug, title, content);
+
+  const normalizedTags = blogService.normalizeTags(tags);
+  const coverImageUrl = await blogService.saveCoverImage(req, uniqueSlug);
+
+  const blog = await Blog.create({
     title,
     slug: uniqueSlug,
     content,
@@ -96,12 +76,13 @@ exports.createBlogPost = catchAsync(async (req, res, next) => {
     tags: normalizedTags,
     metaTitle: metaTitle || title,
     metaDescription,
-    author: authorId,
+    author: req.user._id,
     readingTime,
     publishedAt: status === 'published' ? new Date() : null,
   });
 
   await blog.populate('author');
+  blogService.clearBlogCache();
 
   res.status(201).json({
     status: 'success',
@@ -111,33 +92,34 @@ exports.createBlogPost = catchAsync(async (req, res, next) => {
 });
 
 exports.updateBlogPost = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
-  const { title, slug, content, excerpt, status, tags, metaTitle, metaDescription } = req.body;
-
-  const blog = await Blog.findById(id);
+  const blog = await Blog.findById(req.params.id);
   if (!blog) return next(new AppError('Blog not found', 404));
 
-  const normalizedTags = normalizeTags(tags);
+  blogService.validateBlog(req, { requireCoverImage: false });
 
-  let updateData = {
-    title,
-    slug,
-    content,
-    excerpt,
-    status,
+  const normalizedTags = blogService.normalizeTags(req.body.tags);
+
+  const updateData = {
+    title: req.body.title,
+    slug: req.body.slug,
+    content: req.body.content,
+    excerpt: req.body.excerpt,
+    status: req.body.status,
     tags: normalizedTags,
-    metaTitle,
-    metaDescription,
+    metaTitle: req.body.metaTitle,
+    metaDescription: req.body.metaDescription,
   };
 
-  updateData = Object.fromEntries(Object.entries(updateData).filter(([_, v]) => v !== undefined));
+  Object.keys(updateData).forEach((key) => updateData[key] === undefined && delete updateData[key]);
 
-  updateData.coverImageUrl = await saveCoverImage(req, blog.slug, blog);
+  updateData.coverImageUrl = await blogService.saveCoverImage(req, blog.slug, blog);
 
-  const updatedBlog = await Blog.findByIdAndUpdate(id, updateData, {
+  const updatedBlog = await Blog.findByIdAndUpdate(req.params.id, updateData, {
     new: true,
     runValidators: true,
   }).populate('author');
+
+  blogService.clearBlogCache();
 
   res.status(200).json({
     status: 'success',
@@ -148,12 +130,10 @@ exports.updateBlogPost = catchAsync(async (req, res, next) => {
 
 exports.deleteBlogPost = catchAsync(async (req, res, next) => {
   const blog = await Blog.findById(req.params.id);
-
-  if (!blog) {
-    return next(new AppError('Blog post not found', 404));
-  }
+  if (!blog) return next(new AppError('Blog post not found', 404));
 
   const folderName = `mdt/mdt_blog/${blog.slug}`.replace(/\s+/g, '_');
+
   try {
     await deleteCloudinaryFolder(folderName);
   } catch (err) {
@@ -161,6 +141,7 @@ exports.deleteBlogPost = catchAsync(async (req, res, next) => {
   }
 
   await Blog.findByIdAndDelete(req.params.id);
+  blogService.clearBlogCache();
 
   res.status(204).json({
     status: 'success',
@@ -170,10 +151,7 @@ exports.deleteBlogPost = catchAsync(async (req, res, next) => {
 
 exports.duplicateBlogPost = catchAsync(async (req, res, next) => {
   const blog = await Blog.findById(req.params.id);
-
-  if (!blog) {
-    return next(new AppError('Blog post not found', 404));
-  }
+  if (!blog) return next(new AppError('Blog post not found', 404));
 
   const blogObj = blog.toObject();
 
@@ -187,9 +165,10 @@ exports.duplicateBlogPost = catchAsync(async (req, res, next) => {
 
   blogObj.title = `${blogObj.title} Copy`;
   blogObj.slug = `${blogObj.slug}-copy`;
-  blogObj.status = `draft`;
+  blogObj.status = 'draft';
 
   const duplicated = await Blog.create(blogObj);
+  blogService.clearBlogCache();
 
   res.status(201).json({
     status: 'success',
@@ -198,21 +177,18 @@ exports.duplicateBlogPost = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.publishBlog = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
-
+exports.publishBlog = catchAsync(async (req, res) => {
   const updatedBlog = await Blog.findByIdAndUpdate(
-    id,
+    req.params.id,
     {
       status: 'published',
       publishedAt: new Date(),
       publisher: req.user._id,
     },
-    {
-      new: true,
-      runValidators: true,
-    },
+    { new: true, runValidators: true },
   );
+
+  blogService.clearBlogCache();
 
   res.status(200).json({
     status: 'success',
