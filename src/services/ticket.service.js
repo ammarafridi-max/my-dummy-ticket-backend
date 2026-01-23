@@ -1,8 +1,7 @@
 const mongoose = require('mongoose');
 const DummyTicket = require('../models/DummyTicket');
-const stripe = require('../utils/stripe');
 const { v4: uuidv4 } = require('uuid');
-const { adminFormSubmissionEmail, adminPaymentCompletionEmail, laterDateDeliveryEmail } = require('../utils/email');
+const { ticketFormSubmissionEmail, ticketPaymentCompletionEmail, ticketLaterDateDeliveryEmail } = require('./notification.service')
 const paymentService = require('./payment.service');
 
 function buildSearchFilter(search) {
@@ -110,7 +109,7 @@ exports.createTicketRequest = async (payload) => {
 
   const totalQty = ticket.quantity.adults + ticket.quantity.children + ticket.quantity.infants;
 
-  await adminFormSubmissionEmail({
+  await ticketFormSubmissionEmail({
     type: ticket.type,
     from: ticket.from,
     to: ticket.to,
@@ -144,6 +143,7 @@ exports.createStripePaymentUrl = async (formData) => {
     cancelUrl: `${process.env.MDT_FRONTEND}/booking/review-details`,
     metadata: {
       entity: 'DUMMY_TICKET',
+      customer: formData.leadPassenger,
       sessionId: formData.sessionId,
       from: formData.from,
       to: formData.to,
@@ -174,14 +174,14 @@ exports.handleStripeSuccess = async (session) => {
   if (!ticket) return;
 
   if (!ticket.ticketDelivery.immediate) {
-    await laterDateDeliveryEmail({
+    await ticketLaterDateDeliveryEmail({
       to: ticket.email,
       passenger: ticket.passengers?.[0]?.firstName || 'Customer',
       deliveryDate: ticket.ticketDelivery.deliveryDate,
     });
   }
 
-  await adminPaymentCompletionEmail({
+  await ticketPaymentCompletionEmail({
     type: ticket.type,
     from: ticket.from,
     to: ticket.to,
