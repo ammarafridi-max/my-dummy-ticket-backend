@@ -5,3 +5,4 @@
 package-lock.json
 migration.js
 .cursorignore
+dump.rdb
