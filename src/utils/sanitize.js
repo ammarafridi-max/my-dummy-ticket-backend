@@ -59,6 +59,10 @@ const strictOptions = {
 };
 
 module.exports = (req, res, next) => {
+  if (req.originalUrl.includes('/ticket/webhook') || req.originalUrl.includes('/insurance/webhook')) {
+    return next();
+  }
+
   const isRichTextRoute = richTextRoutes.some((route) => req.originalUrl.startsWith(route));
 
   if (!req.body) return next();
