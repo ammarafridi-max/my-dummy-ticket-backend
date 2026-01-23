@@ -6,7 +6,8 @@ const cookieParser = require('cookie-parser');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
-const { stripePaymentWebhook } = require('./controllers/ticket.controller');
+const { ticketStripePaymentWebhook } = require('./controllers/ticket.controller');
+const { insuranceStripePaymentWebhook } = require('./controllers/insurance.controller');
 const AppError = require('./utils/appError');
 const globalErrorHandler = require('./error/error.controller');
 const indexRoutes = require('./routes/index.routes');
@@ -14,7 +15,8 @@ const indexRoutes = require('./routes/index.routes');
 const app = express();
 app.set('trust proxy', 1);
 
-app.post('/api/ticket/webhook', express.raw({ type: 'application/json' }), stripePaymentWebhook);
+app.post('/api/ticket/webhook', express.raw({ type: 'application/json' }), ticketStripePaymentWebhook);
+app.post('/api/insurance/webhook', express.raw({ type: 'application/json' }), insuranceStripePaymentWebhook);
 
 app.use(
   cors({
@@ -46,12 +48,13 @@ const apiLimiter = rateLimit({
 
 app.use('/api', (req, res, next) => {
   if (req.originalUrl.includes('/ticket/webhook')) return next();
+  if (req.originalUrl.includes('/insurance/webhook')) return next();
   apiLimiter(req, res, next);
 });
 
 app.use('/api', indexRoutes);
 
-['uploads', 'qr-codes', 'reservations'].forEach((dir) => {
+['uploads'].forEach((dir) => {
   app.use(
     `/${dir}`,
     express.static(path.join(__dirname, `public/${dir}`), {
