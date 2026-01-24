@@ -59,7 +59,7 @@ const strictOptions = {
 };
 
 module.exports = (req, res, next) => {
-  if (req.originalUrl.includes('/ticket/webhook') || req.originalUrl.includes('/insurance/webhook')) {
+  if (req.originalUrl.includes('/webhook')) {
     return next();
   }
 
