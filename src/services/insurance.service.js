@@ -183,6 +183,8 @@ const createStripePaymentUrl = async ({
     productName: `Travel Insurance`,
     customerEmail: email,
     metadata: {
+      productType: 'insurance',
+      entity: 'TRAVEL_INSURANCE',
       journeyType,
       startDate,
       endDate,
@@ -200,31 +202,27 @@ const createStripePaymentUrl = async ({
 };
 
 const handleStripeSuccess = async (session) => {
-  const { sessionId, policyId, email, leadTraveler } = session.metadata;
-  const currency = session.currency.toUpperCase();
-  const amount = Number((session.amount_total / 100).toFixed(2));
-  const paymentStatus = session.payment_status;
+  if (session.payment_status !== 'paid') return;
 
-  if (paymentStatus !== 'paid') return;
+  const { sessionId, policyId, email, leadTraveler } = session.metadata;
+
+  if (!sessionId || !policyId) {
+    throw new AppError('Missing Stripe metadata for insurance');
+  }
+
+  const existing = await InsuranceApplication.findOne({
+    sessionId,
+    paymentStatus: 'PAID',
+  });
+
+  if (existing) return;
+
+  const currency = (session.currency || 'aed').toUpperCase();
+  const amount = Number((session.amount_total / 100).toFixed(2));
 
   const policyNumber = await issueWISInsurance(policyId);
 
   await sendWISEmail(policyId);
-
-  // await reviewEmailQueue.add('send-review-email', {
-  //   email,
-  //   name: leadTraveler,
-  //   sessionId,
-  // }, {
-  //   // delay: 1 * 60 * 1000, 
-  //   delay: 10 * 1000,
-  //   attempts: 3,
-  //   jobId: `review-email-${sessionId}`,
-  //   backoff: {
-  //     type: 'exponential',
-  //     delay: 2000,
-  //   },
-  // })
 
   await InsuranceApplication.findOneAndUpdate(
     { sessionId },
@@ -237,10 +235,6 @@ const handleStripeSuccess = async (session) => {
     },
     { new: true },
   );
-
-
-  // SEND EMAIL
-
 };
 
 module.exports = {
