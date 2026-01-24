@@ -59,7 +59,11 @@ const strictOptions = {
 };
 
 module.exports = (req, res, next) => {
-  if (req.originalUrl.includes('/webhook')) {
+  if (req.originalUrl.startsWith('/api/webhook')) {
+    return next();
+  }
+
+  if (Buffer.isBuffer(req.body)) {
     return next();
   }
 

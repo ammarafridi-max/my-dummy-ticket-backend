@@ -11,7 +11,7 @@ exports.sendInsuranceFormSubmission = async ({
   quantity,
   passengers,
 }) => {
-  const leadPassenger = `${passengers[0].title} ${passengers[0].firstName} ${passengers[0].lastName}`;
+  const leadPassenger = `${passengers[0].firstName} ${passengers[0].lastName}`;
 
   await sendEmail({
     email: 'info@mydummyticket.ae',
