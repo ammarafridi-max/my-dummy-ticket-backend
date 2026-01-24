@@ -10,13 +10,11 @@ const {
   finalizeWISInsurance,
   validateApplicationBody,
   createStripePaymentUrl,
-  issueWISInsurance,
-  handleStripeSuccess,
+
   createInsuranceMongoDbDocument,
   downloadWISInsuranceDocuments,
 } = require('../services/insurance.service');
 const reviewEmailQueue = require('../queues/reviewEmailQueue');
-const { verifyStripeSignature } = require('../utils/stripe');
 
 exports.getNationalities = catchAsync(async (req, res, next) => {
   const nationalities = await Nationality.find();
@@ -110,17 +108,3 @@ exports.downloadInsurancePolicy = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.insuranceStripePaymentWebhook = async (req, res) => {
-  const event = verifyStripeSignature(req);
-
-  if (!event) {
-    console.error('Invalid Stripe webhook');
-    return res.status(200).json({ received: false });
-  }
-
-  if (event.type === 'checkout.session.completed') {
-    await handleStripeSuccess(event.data.object);
-  }
-
-  res.status(200).json({ received: true });
-};
