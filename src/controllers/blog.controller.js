@@ -82,7 +82,6 @@ exports.createBlogPost = catchAsync(async (req, res) => {
   });
 
   await blog.populate('author');
-  blogService.clearBlogCache();
 
   res.status(201).json({
     status: 'success',
@@ -119,8 +118,6 @@ exports.updateBlogPost = catchAsync(async (req, res, next) => {
     runValidators: true,
   }).populate('author');
 
-  blogService.clearBlogCache();
-
   res.status(200).json({
     status: 'success',
     message: 'Blog updated successfully',
@@ -141,7 +138,6 @@ exports.deleteBlogPost = catchAsync(async (req, res, next) => {
   }
 
   await Blog.findByIdAndDelete(req.params.id);
-  blogService.clearBlogCache();
 
   res.status(204).json({
     status: 'success',
@@ -168,7 +164,6 @@ exports.duplicateBlogPost = catchAsync(async (req, res, next) => {
   blogObj.status = 'draft';
 
   const duplicated = await Blog.create(blogObj);
-  blogService.clearBlogCache();
 
   res.status(201).json({
     status: 'success',
@@ -187,8 +182,6 @@ exports.publishBlog = catchAsync(async (req, res) => {
     },
     { new: true, runValidators: true },
   );
-
-  blogService.clearBlogCache();
 
   res.status(200).json({
     status: 'success',

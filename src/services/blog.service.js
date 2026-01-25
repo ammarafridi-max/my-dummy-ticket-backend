@@ -1,4 +1,3 @@
-const cache = require('../utils/cache');
 const Blog = require('../models/Blog');
 const slugify = require('slugify');
 const AppError = require('../utils/appError');
@@ -6,11 +5,6 @@ const { uploadImageToCloudinary, deleteCloudinaryFile } = require('../utils/clou
 const { generateUniqueSlug, estimateReadingTime } = require('../utils/blogHelper');
 
 exports.getBlogs = async ({ page, limit, status, tag, search }) => {
-  const cacheKey = `blogs:${page}:${limit}:${status || 'all'}:${tag || 'all'}:${search || ''}`;
-
-  const cached = await cache.get(cacheKey);
-  if (cached) return cached;
-
   const skip = (page - 1) * limit;
   const filter = {};
 
@@ -32,17 +26,10 @@ exports.getBlogs = async ({ page, limit, status, tag, search }) => {
 
   const result = { blogs, total };
 
-  await cache.set(cacheKey, result);
-
   return result;
 };
 
 exports.getBlogBySlug = async (slug) => {
-  const cacheKey = `blog:${slug}`;
-
-  const cached = await cache.get(cacheKey);
-  if (cached) return cached;
-
   const blog = await Blog.findOne({
     slug,
     status: 'published',
@@ -50,16 +37,7 @@ exports.getBlogBySlug = async (slug) => {
 
   if (!blog) return null;
 
-  cache.set(cacheKey, blog);
   return blog;
-};
-
-exports.clearBlogCache = () => {
-  cache.keys().forEach((key) => {
-    if (key.startsWith('blog:') || key.startsWith('blogs:')) {
-      cache.del(key);
-    }
-  });
 };
 
 exports.validateBlog = (req, { requireCoverImage = true } = {}) => {
