@@ -17,12 +17,12 @@ const startServer = async () => {
 
     const server = app.listen(process.env.PORT || 3001, '0.0.0.0', () => {
       console.log(
-        `🚀 Server running on port ${process.env.PORT || 3001} (${process.env.NODE_ENV})`
+        `Server running on port ${process.env.PORT || 3001} (${process.env.NODE_ENV})`
       );
     });
 
     process.on('unhandledRejection', (err) => {
-      console.error('UNHANDLED REJECTION! 💥 Shutting down...');
+      console.error('UNHANDLED REJECTION! Shutting down...');
       console.error(err);
       server.close(async () => {
         await mongoose.connection.close();
