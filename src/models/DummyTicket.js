@@ -4,8 +4,8 @@ const { v4: uuidv4 } = require('uuid');
 const PassengerSchema = new mongoose.Schema({
   type: String,
   title: String,
-  firstName: String,
-  lastName: String,
+  firstName: { type: String, trim: true },
+  lastName: { type: String, trim: true },
 });
 
 const SegmentSchema = new mongoose.Schema({
