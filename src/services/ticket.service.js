@@ -111,29 +111,6 @@ exports.createTicketRequest = async (payload) => {
     sessionId: uuidv4(),
   });
 
-  const totalQty = ticket.quantity.adults + ticket.quantity.children + ticket.quantity.infants;
-
-  await ticketFormSubmissionEmail({
-    type: ticket.type,
-    from: ticket.from,
-    to: ticket.to,
-    submittedOn: ticket.createdAt,
-    ticketCount: totalQty,
-    passengers: ticket.passengers,
-    number:
-      ticket.phoneNumber?.code && ticket.phoneNumber?.digits
-        ? ticket.phoneNumber.code + ticket.phoneNumber.digits
-        : 'Not provided',
-    email: ticket.email,
-    departureDate: ticket.departureDate,
-    returnDate: ticket.returnDate,
-    flightDetails: ticket.flightDetails,
-    ticketValidity: ticket.ticketValidity,
-    ticketDelivery: ticket?.ticketDelivery?.immediate,
-    ticketDeliveryDate: ticket?.ticketDelivery?.deliveryDate,
-    message: ticket.message,
-  });
-
   return ticket;
 };
 
@@ -189,13 +166,20 @@ exports.handleStripeSuccess = async (session) => {
   }
 
   await ticketPaymentCompletionEmail({
+    createdAt: ticket.createdAt,
     type: ticket.type,
     from: ticket.from,
     to: ticket.to,
     departureDate: ticket.departureDate,
     returnDate: ticket.returnDate,
-    customer: session.metadata.customer,
+    leadPassenger: ticket.leadPassenger,
     email: ticket.email,
+    number: ticket.phoneNumber?.code && ticket.phoneNumber?.digits ? ticket.phoneNumber.code + ticket.phoneNumber.digits : 'Not provided',
+    flightDetails: ticket?.flightDetails,
+    ticketValidity: ticket?.ticketValidity,
+    ticketDelivery: ticket?.ticketDelivery,
+    passengers: ticket.passengers,
+    message: ticket.message
   });
 };
 
