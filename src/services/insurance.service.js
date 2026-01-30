@@ -3,7 +3,9 @@ const paymentService = require('./payment.service');
 const InsuranceApplication = require('../models/InsuranceApplication');
 // const reviewEmailQueue = require('../queues/reviewEmailQueue');
 
-const WISURL = 'https://admin.uat.wisdevelopments.com/api/v1';
+const isProduction = process.env.NODE_ENV === 'production'
+
+const WISURL = isProduction ? 'https://admin.wisconnectz.com' : 'https://admin.uat.wisdevelopments.com/api/v1';
 const agency_id = '129';
 const agency_code = '3JKuGdfj';
 
@@ -80,7 +82,7 @@ const validateApplicationBody = (body) => {
 
   body.passengers.forEach((pax, i) => {
     if (!pax.firstName) throw new AppError('First name is missing');
-    if (!pax.lastName) throw new AppError('First name is missing');
+    if (!pax.lastName) throw new AppError('Last name is missing');
     if (!pax.nationality) throw new AppError('Nationality is missing');
     if (!pax.dob) throw new AppError('Date of birth is missing');
     if (!pax.passport) throw new AppError('Passport number is missing');
