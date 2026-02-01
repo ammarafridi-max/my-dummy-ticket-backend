@@ -64,4 +64,13 @@ const InsuranceApplicationSchema = new mongoose.Schema(
   },
 );
 
+InsuranceApplicationSchema.virtual('leadPassenger').get(function () {
+  if (this.passengers && this.passengers.length > 0) {
+    const p = this.passengers[0];
+    return `${p.title || ''} ${p.firstName || ''} ${p.lastName || ''}`.trim();
+  }
+  return null;
+});
+
+
 module.exports = mongoose.model('insurance-application', InsuranceApplicationSchema);

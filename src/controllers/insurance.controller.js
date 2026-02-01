@@ -16,6 +16,15 @@ const {
 } = require('../services/insurance.service');
 const reviewEmailQueue = require('../queues/reviewEmailQueue');
 
+exports.getAllApplications = catchAsync(async(req, res, next) => {
+  const applications = await InsuranceApplication.find({});
+
+  res.status(200).json({
+    message: 'Applications retrieved successfully',
+    data: applications,
+  });
+})
+
 exports.getNationalities = catchAsync(async (req, res, next) => {
   const nationalities = await Nationality.find();
 
@@ -98,13 +107,13 @@ exports.finalizeInsurance = catchAsync(async (req, res, next) => {
 });
 
 exports.downloadInsurancePolicy = catchAsync(async (req, res, next) => {
-  const { policyId } = req.params;
+  const { policyId, index } = req.params;
 
   const policy_documents = await downloadWISInsuranceDocuments(policyId);
 
   res.status(200).json({
     message: 'Policy documents downloaded successfully',
-    data: { policyDocuments: policy_documents[0].url },
+    data: { policyDocuments: policy_documents[index].url },
   });
 });
 
