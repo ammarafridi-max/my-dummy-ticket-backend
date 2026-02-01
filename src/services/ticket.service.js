@@ -1,9 +1,10 @@
 const mongoose = require('mongoose');
-const AppError = require('../utils/appError')
+const AppError = require('../utils/appError');
 const DummyTicket = require('../models/DummyTicket');
-const { v4: uuidv4 } = require('uuid');
-const { ticketFormSubmissionEmail, ticketPaymentCompletionEmail, ticketLaterDateDeliveryEmail } = require('./notification.service')
+const { ticketPaymentCompletionEmail, ticketLaterDateDeliveryEmail } = require('./notification.service');
 const paymentService = require('./payment.service');
+// const { createContact, getContact } = require('../utils/brevo');
+// const { capitalCase } = require('change-case');
 
 function buildSearchFilter(search) {
   if (!search) return {};
@@ -84,7 +85,6 @@ exports.getAllTickets = async (query) => {
 exports.getTicketBySessionId = (sessionId) => DummyTicket.findOne({ sessionId }).populate('handledBy');
 
 exports.updateOrderStatus = async (sessionId, userId, orderStatus) => {
-
   if (!mongoose.Types.ObjectId.isValid(userId)) {
     throw new AppError('INVALID_USER_ID');
   }
@@ -102,14 +102,28 @@ exports.updateOrderStatus = async (sessionId, userId, orderStatus) => {
 };
 
 exports.deleteTicket = async (sessionId) => {
-  await DummyTicket.findOneAndDelete({ sessionId })
-}
+  await DummyTicket.findOneAndDelete({ sessionId });
+};
 
 exports.createTicketRequest = async (payload) => {
-  const ticket = await DummyTicket.create({
-    ...payload,
-    sessionId: uuidv4(),
-  });
+  let ticket = await DummyTicket.findOne({ sessionId: payload.sessionId });
+
+  if (ticket) {
+    Object.assign(ticket, payload);
+    await ticket.save();
+  } else {
+    ticket = await DummyTicket.create(payload);
+  }
+
+  // await createContact({
+  //   firstName: capitalCase(ticket.passengers[0].firstName),
+  //   lastName: capitalCase(ticket.passengers[0].lastName),
+  //   email: ticket.email.toLowerCase(),
+  //   from: ticket.from,
+  //   to: ticket.to,
+  //   departureDate: ticket.departureDate,
+  //   returnDate: ticket.returnDate,
+  // });
 
   return ticket;
 };
@@ -174,12 +188,15 @@ exports.handleStripeSuccess = async (session) => {
     returnDate: ticket.returnDate,
     leadPassenger: ticket.leadPassenger,
     email: ticket.email,
-    number: ticket.phoneNumber?.code && ticket.phoneNumber?.digits ? ticket.phoneNumber.code + ticket.phoneNumber.digits : 'Not provided',
+    number:
+      ticket.phoneNumber?.code && ticket.phoneNumber?.digits
+        ? ticket.phoneNumber.code + ticket.phoneNumber.digits
+        : 'Not provided',
     flightDetails: ticket?.flightDetails,
     ticketValidity: ticket?.ticketValidity,
     ticketDelivery: ticket?.ticketDelivery,
     passengers: ticket.passengers,
-    message: ticket.message
+    message: ticket.message,
   });
 };
 

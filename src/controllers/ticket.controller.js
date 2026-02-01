@@ -1,7 +1,6 @@
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 const ticketService = require('../services/ticket.service');
-const { verifyStripeSignature } = require('../utils/stripe');
 
 exports.getAllTickets = catchAsync(async (req, res) => {
   const result = await ticketService.getAllTickets(req.query);
