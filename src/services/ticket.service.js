@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 const AppError = require('../utils/appError');
 const DummyTicket = require('../models/DummyTicket');
 const { ticketPaymentCompletionEmail, ticketLaterDateDeliveryEmail } = require('./notification.service');
@@ -129,6 +130,8 @@ exports.createTicketRequest = async (payload) => {
 };
 
 exports.createStripePaymentUrl = async (formData) => {
+  const paymentAttemptId = crypto.randomUUID();
+
   return paymentService.createCheckoutSession({
     amount: formData.totalAmount,
     currency: 'aed',
@@ -146,7 +149,7 @@ exports.createStripePaymentUrl = async (formData) => {
       departureDate: formData.departureDate,
       returnDate: formData.returnDate,
     },
-    idempotencyKey: formData.sessionId,
+    idempotencyKey: paymentAttemptId,
   });
 };
 
