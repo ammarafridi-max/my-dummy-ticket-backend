@@ -1,11 +1,11 @@
 const mongoose = require('mongoose');
-const crypto = require('crypto');
 const AppError = require('../utils/appError');
 const DummyTicket = require('../models/DummyTicket');
+const { v4: uuidv4 } = require('uuid');
 const { ticketPaymentCompletionEmail, ticketLaterDateDeliveryEmail } = require('./notification.service');
 const paymentService = require('./payment.service');
-// const { createContact, getContact } = require('../utils/brevo');
 // const { capitalCase } = require('change-case');
+// const { createContact, getContact } = require('../utils/brevo');
 
 function buildSearchFilter(search) {
   if (!search) return {};
@@ -107,14 +107,10 @@ exports.deleteTicket = async (sessionId) => {
 };
 
 exports.createTicketRequest = async (payload) => {
-  let ticket = await DummyTicket.findOne({ sessionId: payload.sessionId });
-
-  if (ticket) {
-    Object.assign(ticket, payload);
-    await ticket.save();
-  } else {
-    ticket = await DummyTicket.create(payload);
-  }
+  const ticket = await DummyTicket.create({
+    ...payload,
+    sessionId: uuidv4(),
+  });
 
   // await createContact({
   //   firstName: capitalCase(ticket.passengers[0].firstName),
@@ -130,8 +126,6 @@ exports.createTicketRequest = async (payload) => {
 };
 
 exports.createStripePaymentUrl = async (formData) => {
-  const paymentAttemptId = crypto.randomUUID();
-
   return paymentService.createCheckoutSession({
     amount: formData.totalAmount,
     currency: 'aed',
@@ -149,7 +143,7 @@ exports.createStripePaymentUrl = async (formData) => {
       departureDate: formData.departureDate,
       returnDate: formData.returnDate,
     },
-    idempotencyKey: paymentAttemptId,
+    idempotencyKey: formData.sessionId,
   });
 };
 

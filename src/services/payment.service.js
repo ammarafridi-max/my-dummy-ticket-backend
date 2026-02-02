@@ -44,7 +44,3 @@ exports.createCheckoutSession = async ({
 
   return session;
 };
-
-// exports.refundService = async ({}) => {
-//   await stripe.
-// }
