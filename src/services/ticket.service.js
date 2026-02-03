@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const AppError = require('../utils/appError');
 const DummyTicket = require('../models/DummyTicket');
+const { stripe } = require('../utils/stripe');
 const { v4: uuidv4 } = require('uuid');
 const { ticketPaymentCompletionEmail, ticketLaterDateDeliveryEmail } = require('./notification.service');
 const paymentService = require('./payment.service');
@@ -153,6 +154,7 @@ exports.handleStripeSuccess = async (session) => {
   const sessionId = session.metadata.sessionId;
   const currency = (session.currency || 'aed').toUpperCase();
   const amount = Number((session.amount_total / 100).toFixed(2));
+  const transactionId = session.id;
 
   const ticket = await DummyTicket.findOneAndUpdate(
     { sessionId },
@@ -160,6 +162,7 @@ exports.handleStripeSuccess = async (session) => {
       $set: {
         paymentStatus: 'PAID',
         amountPaid: { currency, amount },
+        transactionId,
         orderStatus: 'PENDING',
       },
     },
@@ -195,6 +198,39 @@ exports.handleStripeSuccess = async (session) => {
     passengers: ticket.passengers,
     message: ticket.message,
   });
+};
+
+exports.refundStripePaymentByTransactionId = async (transactionId) => {
+  const ticket = await DummyTicket.findOne({ transactionId });
+
+  if (!ticket) throw new AppError('Ticket not found', 404);
+  if (ticket.paymentStatus !== 'PAID') throw new AppError('Payment not completed', 400);
+
+  const sessions = await stripe.checkout.sessions.list({
+    limit: 1,
+    payment_intent: undefined,
+  });
+
+  const session = await stripe.checkout.sessions.retrieve(ticket.transactionId);
+
+  if (!session.payment_intent) throw new AppError('PaymentIntent not found', 400);
+
+  const refund = await stripe.refunds.create({
+    payment_intent: session.payment_intent,
+  });
+
+  await DummyTicket.findOneAndUpdate(
+    { transactionId },
+    {
+      $set: {
+        paymentStatus: 'REFUNDED',
+        orderStatus: 'REFUNDED',
+      },
+    },
+    { new: true },
+  );
+
+  return refund;
 };
 
 /* =========================================================

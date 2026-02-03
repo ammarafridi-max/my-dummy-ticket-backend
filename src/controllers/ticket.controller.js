@@ -8,9 +8,11 @@ exports.getAllTickets = catchAsync(async (req, res) => {
   res.status(200).json({
     status: 'success',
     message: 'Tickets fetched',
-    results: result.data.length,
-    pagination: result.pagination,
-    data: result.data,
+    data: {
+      data: result.data,
+      pagination: result.pagination,
+      results: result.data.length,
+    },
   });
 });
 
@@ -50,4 +52,16 @@ exports.createStripePaymentUrl = catchAsync(async (req, res) => {
   const session = await ticketService.createStripePaymentUrl(req.body);
 
   res.status(200).json({ data: session.url });
+});
+
+exports.refundStripePayment = catchAsync(async (req, res) => {
+  const { transactionId } = req.params;
+
+  const session = await ticketService.refundStripePaymentByTransactionId(transactionId);
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Payment refunded successfully',
+    data: session,
+  });
 });
