@@ -20,13 +20,15 @@ exports.getBlogPosts = catchAsync(async (req, res) => {
   res.status(200).json({
     status: 'success',
     results: blogs.length,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
+    data: {
+      blogs,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     },
-    data: blogs,
   });
 });
 
