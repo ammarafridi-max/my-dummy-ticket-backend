@@ -1,6 +1,16 @@
 const sendEmail = require('../utils/email');
 const formatDate = require('../utils/formatDate');
 const formatDubaiTime = require('../utils/formatDubaiTime');
+const { format } = require('date-fns');
+const extractIataCode = require('../utils/extractIataCode');
+
+function formatToDDMMM(dateStr) {
+  const [year, month, day] = dateStr.split('-');
+
+  const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+  return `${Number(day)}${months[Number(month) - 1]}`;
+}
 
 exports.sendInsuranceFormSubmission = async ({
   quoteId,
@@ -21,7 +31,20 @@ exports.sendInsuranceFormSubmission = async ({
 };
 
 exports.ticketPaymentCompletionEmail = async ({
-  createdAt, type, from, to, departureDate, returnDate, leadPassenger, email, number, flightDetails, ticketValidity, ticketDelivery, passengers, message
+  createdAt,
+  type,
+  from,
+  to,
+  departureDate,
+  returnDate,
+  leadPassenger,
+  email,
+  number,
+  flightDetails,
+  ticketValidity,
+  ticketDelivery,
+  passengers,
+  message,
 }) => {
   // if (process.env.NODE_ENV === 'development') return;
   const htmlContent = `
@@ -74,6 +97,12 @@ exports.ticketPaymentCompletionEmail = async ({
           border-radius: 10px;
         }
 
+        p.danger {
+          background-color: #880808;
+          color: white;
+          margin-bottom: 15px;
+        }
+
         ul {
           margin-bottom: 30px;
         }
@@ -104,6 +133,16 @@ exports.ticketPaymentCompletionEmail = async ({
     </head>
     <body>
       <main>
+        ${
+          !ticketDelivery.immediate
+            ? `
+        <p class="message danger">
+          <strong>Delivery Date:</strong>
+          ${formatDate(ticketDelivery.deliveryDate)}
+        </p>
+        `
+            : ''
+        }
         ${message ? `<p class="message"><strong>Message:</strong> ${message}</p>` : ''}
         <p class="bold large">Trip Details</p>
         <ul>
@@ -129,9 +168,10 @@ exports.ticketPaymentCompletionEmail = async ({
 
         <p class="bold large">Passenger Names</p>
         <ul>
-          ${passengers?.map((passenger) => (
-            `<li>${passenger?.type}: ${passenger?.title} ${passenger?.firstName} / ${passenger?.lastName}</li>`
-          ))}
+          ${passengers?.map(
+            (passenger) =>
+              `<li>${passenger?.type}: ${passenger?.title} ${passenger?.firstName} / ${passenger?.lastName}</li>`,
+          )}
         </ul>
 
         <div class="footer">
@@ -139,7 +179,7 @@ exports.ticketPaymentCompletionEmail = async ({
       </main>
     </body>
     </html>
-  `
+  `;
 
   await sendEmail({
     email: 'info@mydummyticket.ae',
