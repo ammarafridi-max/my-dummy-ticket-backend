@@ -43,7 +43,13 @@ exports.updateCurrentUser = async (userId, payload) => {
     throw new AppError('Please use /updateMyPassword to change password', 403);
   }
 
-  const user = await User.findByIdAndUpdate(userId, payload, {
+  const allowedFields = ['name', 'email', 'username'];
+  const filteredPayload = Object.keys(payload || {}).reduce((acc, key) => {
+    if (allowedFields.includes(key)) acc[key] = payload[key];
+    return acc;
+  }, {});
+
+  const user = await User.findByIdAndUpdate(userId, filteredPayload, {
     new: true,
     runValidators: true,
   });

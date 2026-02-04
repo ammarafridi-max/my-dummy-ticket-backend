@@ -8,11 +8,12 @@ const {
   getInsuranceApplication,
   downloadInsurancePolicy,
 } = require('../controllers/insurance.controller');
+const { protect, restrictTo } = require('../middleware/auth.middleware');
 
-router.route('/').get(getAllApplications)
+router.route('/').get(protect, restrictTo('admin', 'agent'), getAllApplications);
 router.route('/quote').post(getInsuranceQuotes);
 router.route('/finalize').post(finalizeInsurance);
-router.route('/nationalities').post(createNationalities);
+router.route('/nationalities').post(protect, restrictTo('admin'), createNationalities);
 router.route('/nationalities').get(getNationalities);
 router.route('/download/:policyId/:index').get(downloadInsurancePolicy);
 router.route('/:sessionId').get(getInsuranceApplication);

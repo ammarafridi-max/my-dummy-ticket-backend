@@ -31,14 +31,14 @@ const InsuranceApplicationSchema = new mongoose.Schema(
       required: true,
     },
     region: {
-      id: { type: String, enum: ['gulf', 'europe', 'subcon', 'worldwide_ex', 'worldwide']},
+      id: { type: String, enum: ['gulf', 'europe', 'subcon', 'worldwide_ex', 'worldwide'] },
       name: { type: String },
       description: { type: String },
     },
     quantity: {
       adults: { type: Number },
       children: { type: Number },
-      infants: { type: Number },
+      seniors: { type: Number },
     },
     passengers: [PassengerSchema],
     email: { type: String, required: true, match: /^\S+@\S+\.\S+$/ },
@@ -55,7 +55,8 @@ const InsuranceApplicationSchema = new mongoose.Schema(
       currency: { type: String },
       amount: { type: Number },
     },
-    reviewEmailSent: { type: Boolean, default: false }
+    transactionId: { type: String },
+    reviewEmailSent: { type: Boolean, default: false },
   },
   {
     timestamps: true,
@@ -71,6 +72,5 @@ InsuranceApplicationSchema.virtual('leadPassenger').get(function () {
   }
   return null;
 });
-
 
 module.exports = mongoose.model('insurance-application', InsuranceApplicationSchema);

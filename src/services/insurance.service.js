@@ -1,11 +1,10 @@
 const AppError = require('../utils/appError');
 const paymentService = require('./payment.service');
 const InsuranceApplication = require('../models/InsuranceApplication');
-// const reviewEmailQueue = require('../queues/reviewEmailQueue');
 
-const isProduction = process.env.NODE_ENV === 'production'
+const isProduction = process.env.NODE_ENV === 'production';
 
-const WISURL = isProduction ? 'https://admin.wisconnectz.com' : 'https://admin.uat.wisdevelopments.com/api/v1';
+const WISURL = isProduction ? 'https://admin.wisconnectz.com/api/v1' : 'https://admin.uat.wisdevelopments.com/api/v1';
 const agency_id = '129';
 const agency_code = '3JKuGdfj';
 
@@ -19,7 +18,7 @@ async function fetchWIS(slug, data = {}) {
   const json = await res.json();
 
   if (json.status === 'failed') {
-    throw new AppError(json?.errors[0]);
+    throw new AppError(json?.errors?.[0] || 'Insurance provider error', 502);
   }
 
   return json.result;
@@ -38,11 +37,11 @@ const validateForm = (body) => {
     throw new AppError('Region is missing');
   }
 
-  const { adults = 0, children = 0, seniors = 0 } = body.quantity;
+  const { adults = 0, children = 0, seniors = 0 } = body.quantity || {};
   const totalPeople = adults + children + seniors;
 
-  if (totalPeople === 0) {
-    throw new AppError('Please select at least 1 adult, child, or senior');
+  if (adults < 1 || totalPeople === 0) {
+    throw new AppError('Please select at least 1 adult');
   }
 };
 
@@ -78,9 +77,12 @@ const validateApplicationBody = (body) => {
   if (!body.quoteId) throw new AppError('Quote ID missing');
   if (!body.schemeId) throw new AppError('Scheme ID missing');
   if (!body.email) throw new AppError('Email address not entered');
-  if (!body.mobile.digits) throw new AppError('Phone Number missing');
+  if (!body.mobile || !body.mobile.digits) throw new AppError('Phone Number missing');
+  if (!Array.isArray(body.passengers) || body.passengers.length === 0) {
+    throw new AppError('At least one passenger is required');
+  }
 
-  body.passengers.forEach((pax, i) => {
+  body.passengers.forEach((pax) => {
     if (!pax.firstName) throw new AppError('First name is missing');
     if (!pax.lastName) throw new AppError('Last name is missing');
     if (!pax.nationality) throw new AppError('Nationality is missing');
@@ -151,12 +153,12 @@ const createInsuranceMongoDbDocument = async (body, policy_id) => {
     startDate: body.startDate,
     endDate: body.endDate,
     region: body.region,
-    quantity: body.quantity,
+    quantity: body.quantity || {},
     passengers: body.passengers.map((pax) => ({
       firstName: pax.firstName,
       lastName: pax.lastName,
       dob: pax.dob,
-      nationality: pax.nationality.nationality,
+      nationality: pax.nationality?.nationality || pax.nationality,
       passport: pax.passport,
     })),
     email: body.email,
@@ -177,7 +179,7 @@ const createStripePaymentUrl = async ({
   mobile,
   policyId,
   quoteId,
-  leadTraveler = ''
+  leadTraveler = '',
 }) => {
   return paymentService.createCheckoutSession({
     amount: totalAmount,
@@ -195,7 +197,7 @@ const createStripePaymentUrl = async ({
       mobile: `${mobile.code}-${mobile.digits}`,
       policyId,
       quoteId,
-      leadTraveler
+      leadTraveler,
     },
     successUrl: `${process.env.MDT_FRONTEND}/travel-insurance/payment?sessionId=${sessionId}`,
     cancelUrl: `${process.env.MDT_FRONTEND}/travel-insurance/passenger-details`,
@@ -221,6 +223,7 @@ const handleStripeSuccess = async (session) => {
 
   const currency = (session.currency || 'aed').toUpperCase();
   const amount = Number((session.amount_total / 100).toFixed(2));
+  const transactionId = session?.id;
 
   const policyNumber = await issueWISInsurance(policyId);
 
@@ -233,6 +236,7 @@ const handleStripeSuccess = async (session) => {
         policyNumber,
         paymentStatus: 'PAID',
         amountPaid: { currency, amount },
+        transactionId,
       },
     },
     { new: true },

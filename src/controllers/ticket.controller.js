@@ -24,11 +24,12 @@ exports.getTicket = catchAsync(async (req, res, next) => {
 });
 
 exports.updateOrderStatus = catchAsync(async (req, res, next) => {
-  await ticketService.updateOrderStatus(req.params.sessionId, req.body.userId, req.body.orderStatus);
+  const updated = await ticketService.updateOrderStatus(req.params.sessionId, req.user.id, req.body.orderStatus);
 
   res.status(200).json({
     status: 'success',
-    message: `Order status updated`,
+    message: 'Order status updated',
+    data: updated,
   });
 });
 

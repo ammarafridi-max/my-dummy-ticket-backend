@@ -87,11 +87,20 @@ exports.getAllTickets = async (query) => {
 exports.getTicketBySessionId = (sessionId) => DummyTicket.findOne({ sessionId }).populate('handledBy');
 
 exports.updateOrderStatus = async (sessionId, userId, orderStatus) => {
+  if (!orderStatus) {
+    throw new AppError('Order status is required', 400);
+  }
+
+  const allowedStatuses = ['PENDING', 'DELIVERED', 'PROGRESS', 'REFUNDED'];
+  if (!allowedStatuses.includes(orderStatus)) {
+    throw new AppError('Invalid order status', 400);
+  }
+
   if (!mongoose.Types.ObjectId.isValid(userId)) {
     throw new AppError('INVALID_USER_ID');
   }
 
-  return DummyTicket.findOneAndUpdate(
+  const updated = await DummyTicket.findOneAndUpdate(
     { sessionId },
     {
       $set: {
@@ -101,10 +110,19 @@ exports.updateOrderStatus = async (sessionId, userId, orderStatus) => {
     },
     { new: true },
   ).populate('handledBy');
+
+  if (!updated) {
+    throw new AppError('Ticket not found', 404);
+  }
+
+  return updated;
 };
 
 exports.deleteTicket = async (sessionId) => {
-  await DummyTicket.findOneAndDelete({ sessionId });
+  const deleted = await DummyTicket.findOneAndDelete({ sessionId });
+  if (!deleted) {
+    throw new AppError('Ticket not found', 404);
+  }
 };
 
 exports.createTicketRequest = async (payload) => {
@@ -205,11 +223,6 @@ exports.refundStripePaymentByTransactionId = async (transactionId) => {
 
   if (!ticket) throw new AppError('Ticket not found', 404);
   if (ticket.paymentStatus !== 'PAID') throw new AppError('Payment not completed', 400);
-
-  const sessions = await stripe.checkout.sessions.list({
-    limit: 1,
-    payment_intent: undefined,
-  });
 
   const session = await stripe.checkout.sessions.retrieve(ticket.transactionId);
 
