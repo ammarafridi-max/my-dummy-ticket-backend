@@ -2,6 +2,10 @@
 
 Express API for My Dummy Ticket. Handles dummy ticket bookings, travel insurance, blogs, users, and payments.
 
+## Documentation
+
+See the full docs in `mdt-backend/docs/README.md`.
+
 ## Stack
 
 - Node.js + Express
