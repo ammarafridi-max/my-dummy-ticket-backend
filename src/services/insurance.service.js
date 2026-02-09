@@ -5,8 +5,8 @@ const InsuranceApplication = require('../models/InsuranceApplication');
 const isProduction = process.env.NODE_ENV === 'production';
 
 const WISURL = isProduction ? 'https://admin.wisconnectz.com/api/v1' : 'https://admin.uat.wisdevelopments.com/api/v1';
-const agency_id = '129';
-const agency_code = '3JKuGdfj';
+const agency_id = process.env.WIS_AGENCY_ID;
+const agency_code = process.env.WIS_AGENCY_CODE;
 
 async function fetchWIS(slug, data = {}) {
   const res = await fetch(`${WISURL}/${slug}`, {
