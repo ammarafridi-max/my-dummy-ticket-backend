@@ -65,6 +65,8 @@ exports.ticketPaymentCompletionEmail = async ({
           font-family: 'Arial', sans-serif;
         }
 
+        li span { display: inline !important; white-space: nowrap; }
+
         main {
           width: 600px;
           margin: 0 auto;
@@ -80,7 +82,7 @@ exports.ticketPaymentCompletionEmail = async ({
         a {
           color: black;
           text-decoration: none;
-          display: block;
+          display: inline;
         }
 
         p {
@@ -101,6 +103,10 @@ exports.ticketPaymentCompletionEmail = async ({
           background-color: #880808;
           color: white;
           margin-bottom: 15px;
+        }
+
+        .dot {
+          margin: 0 5px;
         }
 
         ul {
@@ -151,13 +157,13 @@ exports.ticketPaymentCompletionEmail = async ({
           </li>
           <li>From: <span>${from}</span></li>
           <li>To: <span>${to}</span></li>
-          <li>Departure: <span>${formatDate(departureDate)}  •  ${flightDetails?.departureFlight?.segments[0]?.carrierCode || ''} ${flightDetails?.departureFlight?.segments[0]?.flightNumber || ''}</span></li>
-          ${type === 'Return' ? `<li>Return Date: <span>${formatDate(returnDate)}  •  ${flightDetails?.returnFlight?.segments[0]?.carrierCode || ''} ${flightDetails?.returnFlight?.segments[0]?.flightNumber || ''}</span></li>` : ''}
+          <li>Departure: <span>${formatDate(departureDate)}  <span class="dot">•</span>  ${flightDetails?.departureFlight?.segments[0]?.carrierCode || ''} ${flightDetails?.departureFlight?.segments[0]?.flightNumber || ''}</span></li>
+          ${type === 'Return' ? `<li>Return Date: <span>${formatDate(returnDate)}  <span class="dot">•</span>  ${flightDetails?.returnFlight?.segments[0]?.carrierCode || ''} ${flightDetails?.returnFlight?.segments[0]?.flightNumber || ''}</span></li>` : ''}
         </ul>
 
         <p class="bold large">Ticket Details</p>
         <ul>
-          <li>Booking Date: ${formatDate(createdAt)}  •  ${formatDubaiTime(createdAt)}</li>
+          <li>Booking Date: ${formatDate(createdAt)}  <span class="dot">•</span>  ${formatDubaiTime(createdAt)}</li>
           <li>Validity: <span>${ticketValidity}</span></li>
           <li>Delivery: <span>${ticketDelivery?.immediate ? 'Immediate' : formatDate(ticketDelivery?.deliveryDate)}</span></li>
           <li>Email: <span>${email}</span></li>
