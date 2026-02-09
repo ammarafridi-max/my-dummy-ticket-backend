@@ -151,15 +151,13 @@ exports.ticketPaymentCompletionEmail = async ({
           </li>
           <li>From: <span>${from}</span></li>
           <li>To: <span>${to}</span></li>
-          <li>Departure Date: <span>${formatDate(departureDate)}</span></li>
-          ${type === 'Return' ? `<li>Return Date: <span>${formatDate(returnDate)}</span></li>` : ''}
-          <li>Departure Flight: <span>${flightDetails?.departureFlight?.segments[0]?.carrierCode || ''} ${flightDetails?.departureFlight?.segments[0]?.flightNumber || ''}</span></li>
-          ${type === 'Return' ? `<li>Return Flight: <span>${flightDetails?.returnFlight?.segments[0]?.carrierCode || ''} ${flightDetails?.returnFlight?.segments[0]?.flightNumber || ''}</span></li>` : ''}
+          <li>Departure: <span>${formatDate(departureDate)}  •  ${flightDetails?.departureFlight?.segments[0]?.carrierCode || ''} ${flightDetails?.departureFlight?.segments[0]?.flightNumber || ''}</span></li>
+          ${type === 'Return' ? `<li>Return Date: <span>${formatDate(returnDate)}  •  ${flightDetails?.returnFlight?.segments[0]?.carrierCode || ''} ${flightDetails?.returnFlight?.segments[0]?.flightNumber || ''}</span></li>` : ''}
         </ul>
 
         <p class="bold large">Ticket Details</p>
         <ul>
-          <li>Booking Date: ${formatDate(createdAt)} ${formatDubaiTime(createdAt)}</li>
+          <li>Booking Date: ${formatDate(createdAt)}  •  ${formatDubaiTime(createdAt)}</li>
           <li>Validity: <span>${ticketValidity}</span></li>
           <li>Delivery: <span>${ticketDelivery?.immediate ? 'Immediate' : formatDate(ticketDelivery?.deliveryDate)}</span></li>
           <li>Email: <span>${email}</span></li>
