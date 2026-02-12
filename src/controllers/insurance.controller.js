@@ -10,6 +10,7 @@ const {
   finalizeWISInsurance,
   validateApplicationBody,
   createStripePaymentUrl,
+  validateForm,
 
   createInsuranceMongoDbDocument,
   downloadWISInsuranceDocuments,
@@ -118,6 +119,7 @@ exports.getInsuranceApplication = catchAsync(async (req, res, next) => {
 });
 
 exports.getInsuranceQuotes = catchAsync(async (req, res, next) => {
+  validateForm(req.body);
   const formattedBody = formatFormBody(req.body);
 
   const data = await fetchWISInsuranceQuotes(formattedBody);
@@ -173,5 +175,20 @@ exports.downloadInsurancePolicy = catchAsync(async (req, res, next) => {
   res.status(200).json({
     message: 'Policy documents downloaded successfully',
     data: { policyDocuments: policy_documents[index].url },
+  });
+});
+
+exports.getInsuranceDocuments = catchAsync(async (req, res, next) => {
+  const { policyId } = req.params;
+
+  const policy_documents = await downloadWISInsuranceDocuments(policyId);
+
+  if (!policy_documents || policy_documents.length === 0) {
+    return next(new AppError('Policy documents not found', 404));
+  }
+
+  res.status(200).json({
+    message: 'Policy documents retrieved successfully',
+    data: policy_documents,
   });
 });

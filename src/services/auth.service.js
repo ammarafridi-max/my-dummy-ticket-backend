@@ -8,6 +8,7 @@ exports.login = async ({ email, password }) => {
 
   const user = await User.findOne({ email }).select('+password');
   if (!user) throw new AppError('User does not exist', 404);
+  if (user.status === 'INACTIVE') throw new AppError('User is inactive', 403);
 
   const correct = await user.correctPassword(password, user.password);
   if (!correct) throw new AppError('Incorrect password', 401);

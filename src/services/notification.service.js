@@ -30,6 +30,75 @@ exports.sendInsuranceFormSubmission = async ({
   });
 };
 
+exports.insurancePaymentCompletionEmail = async ({
+  leadTraveler,
+  email,
+  sessionId,
+  policyId,
+  policyNumber,
+  amount,
+  currency,
+  journeyType,
+  startDate,
+  endDate,
+  region,
+  quoteId,
+  mobile,
+}) => {
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Travel Insurance Payment - ${leadTraveler}</title>
+      <style>
+        * { box-sizing: border-box; padding: 0; margin: 0; }
+        body { font-family: 'Arial', sans-serif; }
+        main { width: 600px; margin: 0 auto; border: 1px solid lightgray; padding: 20px; }
+        div, a, p, span, li { font-size: 15px; line-height: 24px; }
+        ul { margin-bottom: 20px; }
+        li { list-style-type: none; }
+        .bold { font-weight: 600; }
+        .section { margin-bottom: 18px; }
+        @media screen and (max-width: 991px) { main { width: 100%; } }
+      </style>
+    </head>
+    <body>
+      <main>
+        <p class="bold section">Payment received for travel insurance</p>
+        <div class="section">
+          <p><span class="bold">Lead traveler:</span> ${leadTraveler || '-'}</p>
+          <p><span class="bold">Customer email:</span> ${email || '-'}</p>
+          <p><span class="bold">Phone:</span> ${mobile || '-'}</p>
+        </div>
+        <div class="section">
+          <p><span class="bold">Amount:</span> ${currency || ''} ${amount || ''}</p>
+          <p><span class="bold">Session ID:</span> ${sessionId || '-'}</p>
+          <p><span class="bold">Quote ID:</span> ${quoteId || '-'}</p>
+        </div>
+        <div class="section">
+          <p><span class="bold">Policy ID:</span> ${policyId || '-'}</p>
+          <p><span class="bold">Policy Number:</span> ${policyNumber || '-'}</p>
+        </div>
+        <div class="section">
+          <p><span class="bold">Journey type:</span> ${journeyType || '-'}</p>
+          <p><span class="bold">Travel dates:</span> ${startDate || '-'} to ${endDate || '-'}</p>
+          <p><span class="bold">Region:</span> ${region || '-'}</p>
+        </div>
+      </main>
+    </body>
+    </html>
+  `;
+
+  await sendEmail({
+    email: 'info@mydummyticket.ae',
+    name: 'Payments - My Dummy Ticket',
+    subject: `Travel insurance payment received by ${leadTraveler || 'customer'}`,
+    htmlContent,
+  });
+};
+
 exports.ticketPaymentCompletionEmail = async ({
   createdAt,
   type,
@@ -158,7 +227,7 @@ exports.ticketPaymentCompletionEmail = async ({
           <li>From: <span>${from}</span></li>
           <li>To: <span>${to}</span></li>
           <li>Departure: <span>${formatDate(departureDate)}  <span class="dot">•</span>  ${flightDetails?.departureFlight?.segments[0]?.carrierCode || ''} ${flightDetails?.departureFlight?.segments[0]?.flightNumber || ''}</span></li>
-          ${type === 'Return' ? `<li>Return Date: <span>${formatDate(returnDate)}  <span class="dot">•</span>  ${flightDetails?.returnFlight?.segments[0]?.carrierCode || ''} ${flightDetails?.returnFlight?.segments[0]?.flightNumber || ''}</span></li>` : ''}
+          ${type === 'Return' ? `<li>Return: <span>${formatDate(returnDate)}  <span class="dot">•</span>  ${flightDetails?.returnFlight?.segments[0]?.carrierCode || ''} ${flightDetails?.returnFlight?.segments[0]?.flightNumber || ''}</span></li>` : ''}
         </ul>
 
         <p class="bold large">Ticket Details</p>

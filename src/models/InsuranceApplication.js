@@ -9,6 +9,7 @@ const PassengerSchema = new mongoose.Schema(
     lastName: String,
     dob: String,
     nationality: String,
+    nationalityId: String,
     passport: String,
   },
   { _id: false },

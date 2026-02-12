@@ -1,12 +1,20 @@
 const AppError = require('../utils/appError');
 const paymentService = require('./payment.service');
 const InsuranceApplication = require('../models/InsuranceApplication');
+const { insurancePaymentCompletionEmail } = require('./notification.service');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
 const WISURL = isProduction ? 'https://admin.wisconnectz.com/api/v1' : 'https://admin.uat.wisdevelopments.com/api/v1';
 const agency_id = process.env.WIS_AGENCY_ID;
 const agency_code = process.env.WIS_AGENCY_CODE;
+
+const formatDateISO = (value) => {
+  if (!value) return value;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toISOString().slice(0, 10);
+};
 
 async function fetchWIS(slug, data = {}) {
   const res = await fetch(`${WISURL}/${slug}`, {
@@ -48,8 +56,8 @@ const validateForm = (body) => {
 const formatFormBody = (body) => {
   const formattedBody = {
     journey_id: body.journeyType,
-    start_date: body.startDate,
-    end_date: body.endDate,
+    start_date: formatDateISO(body.startDate),
+    end_date: formatDateISO(body.endDate),
     region: body.region,
     age_bands: body.quantity,
     family: 0,
@@ -107,7 +115,7 @@ const formatApplicationBody = (body) => {
   data.title_traveller = body.passengers.map((passenger) => passenger.title);
   data.first_name_traveller = body.passengers.map((passenger) => passenger.firstName);
   data.last_name_traveller = body.passengers.map((passenger) => passenger.lastName);
-  data.dob = body.passengers.map((passenger) => passenger.dob);
+  data.dob = body.passengers.map((passenger) => formatDateISO(passenger.dob));
   data.passport_number = body.passengers.map((passenger) => passenger.passport);
   data.nationality_traveller = body.passengers.map((passenger) => passenger?.nationality?.id || null);
 
@@ -130,6 +138,11 @@ const finalizeWISInsurance = async (data) => {
 };
 
 const issueWISInsurance = async (policyId) => {
+  const { policy_number } = await fetchWIS('quote/outbound/issued', { policy_id: policyId });
+  return policy_number;
+};
+
+const purchaseWISInsurance = async (policyId) => {
   const { policy_number } = await fetchWIS('quote/outbound/purchase', { policy_id: policyId });
   return policy_number;
 };
@@ -155,10 +168,12 @@ const createInsuranceMongoDbDocument = async (body, policy_id) => {
     region: body.region,
     quantity: body.quantity || {},
     passengers: body.passengers.map((pax) => ({
+      title: pax.title,
       firstName: pax.firstName,
       lastName: pax.lastName,
       dob: pax.dob,
       nationality: pax.nationality?.nationality || pax.nationality,
+      nationalityId: pax.nationality?.id || null,
       passport: pax.passport,
     })),
     email: body.email,
@@ -208,7 +223,18 @@ const createStripePaymentUrl = async ({
 const handleStripeSuccess = async (session) => {
   if (session.payment_status !== 'paid') return;
 
-  const { sessionId, policyId, email, leadTraveler } = session.metadata;
+  const {
+    sessionId,
+    policyId,
+    email,
+    leadTraveler,
+    journeyType,
+    startDate,
+    endDate,
+    region,
+    quoteId,
+    mobile,
+  } = session.metadata;
 
   if (!sessionId || !policyId) {
     throw new AppError('Missing Stripe metadata for insurance');
@@ -225,11 +251,14 @@ const handleStripeSuccess = async (session) => {
   const amount = Number((session.amount_total / 100).toFixed(2));
   const transactionId = session?.id;
 
-  const policyNumber = await issueWISInsurance(policyId);
+  const policyNumber = await purchaseWISInsurance(policyId);
+  if (!policyNumber) {
+    throw new AppError('WIS purchase did not return a policy number');
+  }
 
   await sendWISEmail(policyId);
 
-  await InsuranceApplication.findOneAndUpdate(
+  const updated = await InsuranceApplication.findOneAndUpdate(
     { sessionId },
     {
       $set: {
@@ -241,6 +270,22 @@ const handleStripeSuccess = async (session) => {
     },
     { new: true },
   );
+
+  await insurancePaymentCompletionEmail({
+    leadTraveler,
+    email,
+    sessionId,
+    policyId,
+    policyNumber,
+    amount,
+    currency,
+    journeyType,
+    startDate,
+    endDate,
+    region,
+    quoteId,
+    mobile,
+  });
 };
 
 module.exports = {
@@ -252,6 +297,7 @@ module.exports = {
   fetchWISInsuranceQuotes,
   finalizeWISInsurance,
   issueWISInsurance,
+  purchaseWISInsurance,
   sendWISEmail,
   downloadWISInsuranceDocuments,
   createInsuranceMongoDbDocument,
