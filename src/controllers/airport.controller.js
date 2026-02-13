@@ -1,14 +1,13 @@
-const amadeus = require('../utils/amadeus');
+const { getAmadeusClient } = require('../utils/amadeus');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 
 exports.fetchAirports = catchAsync(async (req, res, next) => {
+  const amadeus = getAmadeusClient();
   const keyword = (req.query.keyword || '').trim();
 
   if (!keyword || keyword.length < 3) {
-    return next(
-      new AppError('Airport keyword is required and must be at least 3 characters long.', 400),
-    );
+    return next(new AppError('Airport keyword is required and must be at least 3 characters long.', 400));
   }
 
   const response = await amadeus.referenceData.locations.get({

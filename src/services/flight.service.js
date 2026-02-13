@@ -1,9 +1,10 @@
 const Airline = require('../models/Airline');
-const amadeus = require('../utils/amadeus');
+const { getAmadeusClient } = require('../utils/amadeus');
 const extractIataCode = require('../utils/extractIataCode');
 const AppError = require('../utils/appError');
 
 exports.addAirlineByCode = async (airlineCode) => {
+  const amadeus = getAmadeusClient();
   const exists = await Airline.findOne({ iataCode: airlineCode });
   if (exists) {
     throw new AppError('This airline data already exists', 409);
@@ -27,6 +28,8 @@ exports.addAirlineByCode = async (airlineCode) => {
 };
 
 exports.searchFlights = async ({ type, from, to, departureDate, returnDate, quantity = {} }) => {
+  const amadeus = getAmadeusClient();
+
   if (!from || !to || !departureDate) {
     throw new AppError('Please provide departure, arrival, and departure date', 400);
   }
@@ -66,10 +69,10 @@ exports.searchFlights = async ({ type, from, to, departureDate, returnDate, quan
 
   let flights = response.data.filter((f) => f.itineraries[0].segments.length <= 2);
 
-  return enrichFlightsWithAirlines(flights);
+  return enrichFlightsWithAirlines(flights, amadeus);
 };
 
-async function enrichFlightsWithAirlines(flights) {
+async function enrichFlightsWithAirlines(flights, amadeus) {
   const airlineCodes = [...new Set(flights.flatMap((f) => f.validatingAirlineCodes))];
 
   const airlinesInDb = await Airline.find({
