@@ -1,5 +1,7 @@
 process.env.DOTENV_CONFIG_QUIET = 'true';
-require('dotenv').config({ path: `.env.${process.env.NODE_ENV}` });
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config({ path: `.env.${process.env.NODE_ENV}` });
+}
 
 const mongoose = require('mongoose');
 const app = require('./app');
