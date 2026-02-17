@@ -193,3 +193,15 @@ exports.confirmInsurancePayment = catchAsync(async (req, res, next) => {
     data,
   });
 });
+
+exports.deleteInsuranceApplication = catchAsync(async (req, res, next) => {
+  const { sessionId } = req.params;
+
+  const deleted = await InsuranceApplication.findOneAndDelete({ sessionId });
+  if (!deleted) return next(new AppError('Insurance application not found', 404));
+
+  res.status(204).json({
+    status: 'success',
+    data: null,
+  });
+});
