@@ -85,6 +85,9 @@ const validateApplicationBody = (body) => {
   if (!body.quoteId) throw new AppError('Quote ID missing');
   if (!body.schemeId) throw new AppError('Scheme ID missing');
   if (!body.email) throw new AppError('Email address not entered');
+  if (!body.address1) throw new AppError('Address is missing');
+  if (!body.address3) throw new AppError('City is missing');
+  if (!body.address4) throw new AppError('Country is missing');
   if (!body.mobile || !body.mobile.digits) throw new AppError('Phone Number missing');
   if (!Array.isArray(body.passengers) || body.passengers.length === 0) {
     throw new AppError('At least one passenger is required');
@@ -111,6 +114,12 @@ const formatApplicationBody = (body) => {
   data.last_name_customer = body.passengers[0].lastName;
   data.email = body.email;
   data.mobile = body.mobile.code + body.mobile.digits;
+  data.address1 = body.address1;
+  data.address2 = body.address2 || '';
+  data.address3 = body.address3;
+  data.address4 = body.address4;
+  data.custom_redirect_failed_url = `${process.env.MDT_FRONTEND}/travel-insurance/passenger-details?paymentStatus=FAILED`;
+  data.custom_redirect_success_url = `${process.env.MDT_FRONTEND}/travel-insurance/payment?sessionId=${body.sessionId}&paymentStatus=PAID`;
 
   data.title_traveller = body.passengers.map((passenger) => passenger.title);
   data.first_name_traveller = body.passengers.map((passenger) => passenger.firstName);
@@ -159,6 +168,7 @@ const downloadWISInsuranceDocuments = async (policyId) => {
 
 const createInsuranceMongoDbDocument = async (body, policy_id) => {
   return await InsuranceApplication.create({
+    sessionId: body.sessionId,
     quoteId: body.quoteId,
     schemeId: body.schemeId,
     policyId: policy_id,
@@ -177,6 +187,10 @@ const createInsuranceMongoDbDocument = async (body, policy_id) => {
       passport: pax.passport,
     })),
     email: body.email,
+    address1: body.address1,
+    address2: body.address2 || '',
+    address3: body.address3,
+    address4: body.address4,
     mobile: body.mobile,
     paymentStatus: 'UNPAID',
   });
@@ -223,18 +237,8 @@ const createStripePaymentUrl = async ({
 const handleStripeSuccess = async (session) => {
   if (session.payment_status !== 'paid') return;
 
-  const {
-    sessionId,
-    policyId,
-    email,
-    leadTraveler,
-    journeyType,
-    startDate,
-    endDate,
-    region,
-    quoteId,
-    mobile,
-  } = session.metadata;
+  const { sessionId, policyId, email, leadTraveler, journeyType, startDate, endDate, region, quoteId, mobile } =
+    session.metadata;
 
   if (!sessionId || !policyId) {
     throw new AppError('Missing Stripe metadata for insurance');
@@ -288,6 +292,38 @@ const handleStripeSuccess = async (session) => {
   });
 };
 
+const confirmDirectPayInsurance = async (sessionId) => {
+  const application = await InsuranceApplication.findOne({ sessionId });
+  if (!application) {
+    throw new AppError('Insurance application not found', 404);
+  }
+
+  if (application.paymentStatus === 'PAID') {
+    return application;
+  }
+
+  const policyNumber = await issueWISInsurance(application.policyId);
+  if (!policyNumber) {
+    throw new AppError('Unable to confirm payment from WIS');
+  }
+
+  await sendWISEmail(application.policyId);
+
+  const updated = await InsuranceApplication.findOneAndUpdate(
+    { sessionId },
+    {
+      $set: {
+        policyNumber,
+        paymentStatus: 'PAID',
+        transactionId: `WIS_DIRECTPAY_${application.policyId}`,
+      },
+    },
+    { new: true },
+  );
+
+  return updated;
+};
+
 module.exports = {
   validateForm,
   validateApplicationBody,
@@ -303,4 +339,5 @@ module.exports = {
   createInsuranceMongoDbDocument,
   createStripePaymentUrl,
   handleStripeSuccess,
+  confirmDirectPayInsurance,
 };
