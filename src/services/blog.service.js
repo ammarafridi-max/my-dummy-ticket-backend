@@ -111,3 +111,31 @@ exports.generateUniqueSlugFromInput = async (input, currentId = null) => {
 };
 
 exports.getReadingTime = (content = '') => estimateReadingTime(content);
+
+exports.parseScheduledAt = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+};
+
+exports.publishDueScheduledBlogs = async () => {
+  const now = new Date();
+  const result = await Blog.updateMany(
+    {
+      status: 'scheduled',
+      scheduledAt: { $lte: now },
+    },
+    {
+      $set: {
+        status: 'published',
+        publishedAt: now,
+      },
+      $unset: {
+        scheduledAt: 1,
+      },
+    },
+  );
+
+  return result.modifiedCount || 0;
+};

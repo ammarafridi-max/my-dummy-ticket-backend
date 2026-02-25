@@ -1,12 +1,18 @@
 const mongoose = require('mongoose');
 const AppError = require('../utils/appError');
 const DummyTicket = require('../models/DummyTicket');
+const Affiliate = require('../models/Affiliate');
 const { stripe } = require('../utils/stripe');
 const { v4: uuidv4 } = require('uuid');
 const { ticketPaymentCompletionEmail, ticketLaterDateDeliveryEmail } = require('./notification.service');
 const paymentService = require('./payment.service');
 // const { capitalCase } = require('change-case');
 // const { createContact, getContact } = require('../utils/brevo');
+
+function normalizeEmail(email) {
+  if (typeof email !== 'string') return email;
+  return email.trim().toLowerCase();
+}
 
 function buildSearchFilter(search) {
   if (!search) return {};
@@ -84,7 +90,10 @@ exports.getAllTickets = async (query) => {
   };
 };
 
-exports.getTicketBySessionId = (sessionId) => DummyTicket.findOne({ sessionId }).populate('handledBy');
+exports.getTicketBySessionId = (sessionId) =>
+  DummyTicket.findOne({ sessionId })
+    .populate('handledBy')
+    .populate('affiliate', 'name email affiliateId commissionPercent isActive');
 
 exports.updateOrderStatus = async (sessionId, userId, orderStatus) => {
   if (!orderStatus) {
@@ -126,9 +135,29 @@ exports.deleteTicket = async (sessionId) => {
 };
 
 exports.createTicketRequest = async (payload) => {
+  const normalizedEmail = normalizeEmail(payload?.email);
+  const incomingAffiliateId = payload?.affiliateId;
+  const isValidAffiliateId = /^\d{9}$/.test(incomingAffiliateId || '');
+
+  let affiliateDoc = null;
+  const alreadyHasPaidAffiliatePurchase = normalizedEmail
+    ? await DummyTicket.exists({
+        email: normalizedEmail,
+        paymentStatus: 'PAID',
+        affiliate: { $ne: null },
+      })
+    : false;
+
+  if (isValidAffiliateId && !alreadyHasPaidAffiliatePurchase) {
+    affiliateDoc = await Affiliate.findOne({ affiliateId: incomingAffiliateId }).select('_id affiliateId');
+  }
+
   const ticket = await DummyTicket.create({
     ...payload,
+    email: normalizedEmail,
     sessionId: uuidv4(),
+    affiliateId: affiliateDoc ? affiliateDoc.affiliateId : null,
+    affiliate: affiliateDoc ? affiliateDoc._id : null,
   });
 
   // await createContact({
@@ -173,6 +202,22 @@ exports.handleStripeSuccess = async (session) => {
   const currency = (session.currency || 'aed').toUpperCase();
   const amount = Number((session.amount_total / 100).toFixed(2));
   const transactionId = session.id;
+  const existingTicket = await DummyTicket.findOne({ sessionId });
+
+  if (!existingTicket) return;
+
+  let shouldClearAffiliateAttribution = false;
+
+  if (existingTicket.affiliate && existingTicket.email) {
+    const hasPreviousPaidAffiliatePurchase = await DummyTicket.exists({
+      _id: { $ne: existingTicket._id },
+      email: normalizeEmail(existingTicket.email),
+      paymentStatus: 'PAID',
+      affiliate: { $ne: null },
+    });
+
+    shouldClearAffiliateAttribution = Boolean(hasPreviousPaidAffiliatePurchase);
+  }
 
   const ticket = await DummyTicket.findOneAndUpdate(
     { sessionId },
@@ -182,12 +227,11 @@ exports.handleStripeSuccess = async (session) => {
         amountPaid: { currency, amount },
         transactionId,
         orderStatus: 'PENDING',
+        ...(shouldClearAffiliateAttribution ? { affiliate: null, affiliateId: null } : {}),
       },
     },
     { new: true },
   );
-
-  if (!ticket) return;
 
   if (!ticket.ticketDelivery.immediate) {
     await ticketLaterDateDeliveryEmail({

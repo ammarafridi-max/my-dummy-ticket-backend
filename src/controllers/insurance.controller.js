@@ -1,6 +1,5 @@
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
-const { v4: uuidv4 } = require('uuid');
 const Nationality = require('../models/Nationality');
 const InsuranceApplication = require('../models/InsuranceApplication');
 const {
@@ -10,11 +9,11 @@ const {
   formatApplicationBody,
   finalizeWISInsurance,
   validateApplicationBody,
+  createStripePaymentUrl,
   validateForm,
 
   createInsuranceMongoDbDocument,
   downloadWISInsuranceDocuments,
-  confirmDirectPayInsurance,
 } = require('../services/insurance.service');
 
 exports.getAllApplications = catchAsync(async (req, res) => {
@@ -132,24 +131,35 @@ exports.getInsuranceQuotes = catchAsync(async (req, res, next) => {
 });
 
 exports.finalizeInsurance = catchAsync(async (req, res, next) => {
-  const sessionId = req.body.sessionId || uuidv4();
-  const payload = { ...req.body, sessionId };
+  validateApplicationBody(req.body);
+  const leadTraveler = `${req.body.passengers[0].firstName} ${req.body.passengers[0].lastName}`;
 
-  validateApplicationBody(payload);
-  const leadTraveler = `${payload.passengers[0].firstName} ${payload.passengers[0].lastName}`;
+  const data = formatApplicationBody(req.body);
 
-  const data = formatApplicationBody(payload);
+  const { policy_id, premium, currency } = await finalizeWISInsurance(data);
 
-  const { policy_id, premium, currency, directpay } = await finalizeWISInsurance(data);
-
-  const { journeyType, startDate, endDate, region, email, mobile, policyId, quoteId } =
-    await createInsuranceMongoDbDocument(payload, policy_id);
+  const { journeyType, startDate, endDate, region, sessionId, email, mobile, policyId, quoteId } =
+    await createInsuranceMongoDbDocument(req.body, policy_id);
 
   const currencyLower = (currency || 'aed').toLowerCase();
+  const { url } = await createStripePaymentUrl({
+    totalAmount: premium,
+    currency: currencyLower,
+    journeyType,
+    startDate,
+    endDate,
+    region: region.id,
+    sessionId,
+    email,
+    mobile,
+    policyId,
+    quoteId,
+    leadTraveler,
+  });
 
   res.status(200).json({
     message: 'Finalize in effect',
-    data: { policyId: policy_id, premium, currency: currencyLower, paymentUrl: directpay },
+    data: { policyId: policy_id, premium, currency: currencyLower, paymentUrl: url },
   });
 });
 
@@ -180,28 +190,5 @@ exports.getInsuranceDocuments = catchAsync(async (req, res, next) => {
   res.status(200).json({
     message: 'Policy documents retrieved successfully',
     data: policy_documents,
-  });
-});
-
-exports.confirmInsurancePayment = catchAsync(async (req, res, next) => {
-  const { sessionId } = req.params;
-
-  const data = await confirmDirectPayInsurance(sessionId);
-
-  res.status(200).json({
-    message: 'Insurance payment status synced successfully',
-    data,
-  });
-});
-
-exports.deleteInsuranceApplication = catchAsync(async (req, res, next) => {
-  const { sessionId } = req.params;
-
-  const deleted = await InsuranceApplication.findOneAndDelete({ sessionId });
-  if (!deleted) return next(new AppError('Insurance application not found', 404));
-
-  res.status(204).json({
-    status: 'success',
-    data: null,
   });
 });

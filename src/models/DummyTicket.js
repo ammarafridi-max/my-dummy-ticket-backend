@@ -90,6 +90,13 @@ const DummyTicketSchema = mongoose.Schema(
       type: String,
     },
     handledBy: { type: mongoose.Schema.ObjectId, ref: 'User', default: null },
+    affiliateId: {
+      type: String,
+      trim: true,
+      default: null,
+      match: [/^\d{9}$/, 'Affiliate ID must be exactly 9 digits'],
+    },
+    affiliate: { type: mongoose.Schema.ObjectId, ref: 'Affiliate', default: null },
   },
 
   {
@@ -111,6 +118,8 @@ DummyTicketSchema.index({ createdAt: -1 });
 DummyTicketSchema.index({ email: 1 });
 DummyTicketSchema.index({ orderStatus: 1 });
 DummyTicketSchema.index({ paymentStatus: 1 });
+DummyTicketSchema.index({ affiliateId: 1 });
+DummyTicketSchema.index({ affiliate: 1 });
 
 const DummyTicket = mongoose.model('dummyTicket', DummyTicketSchema);
 
