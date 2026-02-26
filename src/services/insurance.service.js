@@ -1,5 +1,4 @@
 const AppError = require('../utils/appError');
-const paymentService = require('./payment.service');
 const InsuranceApplication = require('../models/InsuranceApplication');
 const { insurancePaymentCompletionEmail } = require('./notification.service');
 
@@ -85,6 +84,9 @@ const validateApplicationBody = (body) => {
   if (!body.quoteId) throw new AppError('Quote ID missing');
   if (!body.schemeId) throw new AppError('Scheme ID missing');
   if (!body.email) throw new AppError('Email address not entered');
+  if (!body.address1) throw new AppError('Address is missing');
+  if (!body.address3) throw new AppError('City is missing');
+  if (!body.address4) throw new AppError('Country is missing');
   if (!body.mobile || !body.mobile.digits) throw new AppError('Phone Number missing');
   if (!Array.isArray(body.passengers) || body.passengers.length === 0) {
     throw new AppError('At least one passenger is required');
@@ -111,6 +113,12 @@ const formatApplicationBody = (body) => {
   data.last_name_customer = body.passengers[0].lastName;
   data.email = body.email;
   data.mobile = body.mobile.code + body.mobile.digits;
+  data.address1 = body.address1;
+  data.address2 = body.address2 || '';
+  data.address3 = body.address3;
+  data.address4 = body.address4;
+  data.custom_redirect_failed_url = `${process.env.MDT_FRONTEND}/travel-insurance/passenger-details?paymentStatus=FAILED`;
+  data.custom_redirect_success_url = `${process.env.MDT_FRONTEND}/travel-insurance/payment?sessionId=${body.sessionId}&paymentStatus=PAID`;
 
   data.title_traveller = body.passengers.map((passenger) => passenger.title);
   data.first_name_traveller = body.passengers.map((passenger) => passenger.firstName);
@@ -157,8 +165,12 @@ const downloadWISInsuranceDocuments = async (policyId) => {
   return policy_documents;
 };
 
-const createInsuranceMongoDbDocument = async (body, policy_id) => {
+const createInsuranceMongoDbDocument = async (body, policy_id, premium = null, currency = null) => {
+  const normalizedAmount = premium === null || premium === undefined ? null : Number(premium);
+  const normalizedCurrency = currency ? String(currency).toUpperCase() : null;
+
   return await InsuranceApplication.create({
+    sessionId: body.sessionId,
     quoteId: body.quoteId,
     schemeId: body.schemeId,
     policyId: policy_id,
@@ -177,76 +189,38 @@ const createInsuranceMongoDbDocument = async (body, policy_id) => {
       passport: pax.passport,
     })),
     email: body.email,
+    address1: body.address1,
+    address2: body.address2 || '',
+    address3: body.address3,
+    address4: body.address4,
     mobile: body.mobile,
+    amountPaid:
+      normalizedAmount !== null && !Number.isNaN(normalizedAmount)
+        ? {
+            currency: normalizedCurrency || 'AED',
+            amount: normalizedAmount,
+          }
+        : undefined,
     paymentStatus: 'UNPAID',
   });
 };
 
-const createStripePaymentUrl = async ({
-  totalAmount,
-  currency = 'aed',
-  journeyType,
-  startDate,
-  endDate,
-  region,
-  sessionId,
-  email,
-  mobile,
-  policyId,
-  quoteId,
-  leadTraveler = '',
-}) => {
-  return paymentService.createCheckoutSession({
-    amount: totalAmount,
-    currency: currency,
-    productName: `Travel Insurance`,
-    customerEmail: email,
-    metadata: {
-      productType: 'insurance',
-      entity: 'TRAVEL_INSURANCE',
-      journeyType,
-      startDate,
-      endDate,
-      region,
-      sessionId,
-      mobile: `${mobile.code}-${mobile.digits}`,
-      policyId,
-      quoteId,
-      leadTraveler,
-    },
-    successUrl: `${process.env.MDT_FRONTEND}/travel-insurance/payment?sessionId=${sessionId}`,
-    cancelUrl: `${process.env.MDT_FRONTEND}/travel-insurance/passenger-details`,
-    idempotencyKey: sessionId,
-  });
-};
-
-const handleStripeSuccess = async (session) => {
-  if (session.payment_status !== 'paid') return;
-
-  const { sessionId, policyId, email, leadTraveler, journeyType, startDate, endDate, region, quoteId, mobile } =
-    session.metadata;
-
-  if (!sessionId || !policyId) {
-    throw new AppError('Missing Stripe metadata for insurance');
+const confirmDirectPayInsurance = async (sessionId) => {
+  const application = await InsuranceApplication.findOne({ sessionId });
+  if (!application) {
+    throw new AppError('Insurance application not found', 404);
   }
 
-  const existing = await InsuranceApplication.findOne({
-    sessionId,
-    paymentStatus: 'PAID',
-  });
+  if (application.paymentStatus === 'PAID') {
+    return application;
+  }
 
-  if (existing) return;
-
-  const currency = (session.currency || 'aed').toUpperCase();
-  const amount = Number((session.amount_total / 100).toFixed(2));
-  const transactionId = session?.id;
-
-  const policyNumber = await purchaseWISInsurance(policyId);
+  const policyNumber = await issueWISInsurance(application.policyId);
   if (!policyNumber) {
-    throw new AppError('WIS purchase did not return a policy number');
+    throw new AppError('Unable to confirm payment from WIS');
   }
 
-  await sendWISEmail(policyId);
+  await sendWISEmail(application.policyId);
 
   const updated = await InsuranceApplication.findOneAndUpdate(
     { sessionId },
@@ -254,28 +228,33 @@ const handleStripeSuccess = async (session) => {
       $set: {
         policyNumber,
         paymentStatus: 'PAID',
-        amountPaid: { currency, amount },
-        transactionId,
+        amountPaid: {
+          currency: application?.amountPaid?.currency || 'AED',
+          amount: application?.amountPaid?.amount || 0,
+        },
+        transactionId: `WIS_DIRECTPAY_${application.policyId}`,
       },
     },
     { new: true },
   );
 
   await insurancePaymentCompletionEmail({
-    leadTraveler,
-    email,
-    sessionId,
-    policyId,
-    policyNumber,
-    amount,
-    currency,
-    journeyType,
-    startDate,
-    endDate,
-    region,
-    quoteId,
-    mobile,
+    leadTraveler: updated?.leadPassenger,
+    email: updated?.email,
+    sessionId: updated?.sessionId,
+    policyId: updated?.policyId,
+    policyNumber: updated?.policyNumber,
+    amount: updated?.amountPaid?.amount,
+    currency: updated?.amountPaid?.currency,
+    journeyType: updated?.journeyType,
+    startDate: updated?.startDate,
+    endDate: updated?.endDate,
+    region: updated?.region?.id || updated?.region?.name,
+    quoteId: updated?.quoteId,
+    mobile: updated?.mobile?.code && updated?.mobile?.digits ? `${updated.mobile.code}${updated.mobile.digits}` : '',
   });
+
+  return updated;
 };
 
 module.exports = {
@@ -291,6 +270,5 @@ module.exports = {
   sendWISEmail,
   downloadWISInsuranceDocuments,
   createInsuranceMongoDbDocument,
-  createStripePaymentUrl,
-  handleStripeSuccess,
+  confirmDirectPayInsurance,
 };
