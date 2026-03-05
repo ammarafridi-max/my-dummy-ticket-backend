@@ -139,14 +139,14 @@ exports.finalizeInsurance = catchAsync(async (req, res, next) => {
 
   const data = formatApplicationBody(payload);
 
-  const { policy_id, premium, currency, directpay } = await finalizeWISInsurance(data);
-  const currencyLower = (currency || 'aed').toLowerCase();
+  const { policy_id, premium, directpay } = await finalizeWISInsurance(data);
+  const currencyCode = 'AED';
 
-  await createInsuranceMongoDbDocument(payload, policy_id, premium, currencyLower);
+  await createInsuranceMongoDbDocument(payload, policy_id, premium, currencyCode);
 
   res.status(200).json({
     message: 'Finalize in effect',
-    data: { policyId: policy_id, premium, currency: currencyLower, paymentUrl: directpay },
+    data: { policyId: policy_id, premium, currency: currencyCode, paymentUrl: directpay },
   });
 });
 

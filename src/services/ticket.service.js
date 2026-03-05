@@ -6,12 +6,35 @@ const { stripe } = require('../utils/stripe');
 const { v4: uuidv4 } = require('uuid');
 const { ticketPaymentCompletionEmail, ticketLaterDateDeliveryEmail } = require('./notification.service');
 const paymentService = require('./payment.service');
+const pricingService = require('./dummyTicketPricing.service');
+const currencyService = require('./currency.service');
+const AFFILIATE_ATTRIBUTION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const AFFILIATE_CAPTURE_FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
 // const { capitalCase } = require('change-case');
 // const { createContact, getContact } = require('../utils/brevo');
 
 function normalizeEmail(email) {
   if (typeof email !== 'string') return email;
   return email.trim().toLowerCase();
+}
+
+function parseAffiliateCapturedAt(value) {
+  if (!value) return null;
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+}
+
+function isAffiliateAttributionWithinWindow(capturedAt, now = new Date()) {
+  if (!capturedAt) return false;
+
+  const capturedMs = capturedAt.getTime();
+  const nowMs = now.getTime();
+  const ageMs = nowMs - capturedMs;
+
+  if (ageMs < -AFFILIATE_CAPTURE_FUTURE_TOLERANCE_MS) return false;
+  return ageMs <= AFFILIATE_ATTRIBUTION_TTL_MS;
 }
 
 function buildSearchFilter(search) {
@@ -138,8 +161,11 @@ exports.createTicketRequest = async (payload) => {
   const normalizedEmail = normalizeEmail(payload?.email);
   const incomingAffiliateId = payload?.affiliateId;
   const isValidAffiliateId = /^\d{9}$/.test(incomingAffiliateId || '');
+  const parsedAffiliateCapturedAt = parseAffiliateCapturedAt(payload?.affiliateCapturedAt);
+  const now = new Date();
 
   let affiliateDoc = null;
+  let affiliateCapturedAt = null;
   const alreadyHasPaidAffiliatePurchase = normalizedEmail
     ? await DummyTicket.exists({
         email: normalizedEmail,
@@ -148,15 +174,25 @@ exports.createTicketRequest = async (payload) => {
       })
     : false;
 
-  if (isValidAffiliateId && !alreadyHasPaidAffiliatePurchase) {
-    affiliateDoc = await Affiliate.findOne({ affiliateId: incomingAffiliateId }).select('_id affiliateId');
+  const hasValidAttributionWindow = isAffiliateAttributionWithinWindow(parsedAffiliateCapturedAt, now);
+
+  if (isValidAffiliateId && !alreadyHasPaidAffiliatePurchase && hasValidAttributionWindow) {
+    affiliateDoc = await Affiliate.findOne({ affiliateId: incomingAffiliateId, isActive: true }).select(
+      '_id affiliateId',
+    );
+
+    if (affiliateDoc) {
+      affiliateCapturedAt = parsedAffiliateCapturedAt;
+    }
   }
 
   const ticket = await DummyTicket.create({
     ...payload,
     email: normalizedEmail,
+    currency: String(payload?.currency || 'AED').toUpperCase(),
     sessionId: uuidv4(),
     affiliateId: affiliateDoc ? affiliateDoc.affiliateId : null,
+    affiliateCapturedAt,
     affiliate: affiliateDoc ? affiliateDoc._id : null,
   });
 
@@ -174,24 +210,60 @@ exports.createTicketRequest = async (payload) => {
 };
 
 exports.createStripePaymentUrl = async (formData) => {
+  const sessionId = formData?.sessionId;
+  if (!sessionId) {
+    throw new AppError('Session ID is required', 400);
+  }
+
+  const ticket = await DummyTicket.findOne({ sessionId });
+  if (!ticket) {
+    throw new AppError('Ticket not found', 404);
+  }
+
+  const adults = Number(ticket?.quantity?.adults || 0);
+  const children = Number(ticket?.quantity?.children || 0);
+  const totalPassengers = adults + children;
+
+  if (totalPassengers < 1) {
+    throw new AppError('At least 1 passenger is required for checkout', 400);
+  }
+
+  const { currency, unitPrice } = await pricingService.getDummyTicketUnitPrice(ticket.ticketValidity);
+  const baseTotalAmount = Number((unitPrice * totalPassengers).toFixed(2));
+  const requestedCurrencyCode = String(formData?.currencyCode || ticket.currency || currency || 'AED').toUpperCase();
+  const { amount: totalAmount, currencyCode } = await currencyService.convertFromBase({
+    amount: baseTotalAmount,
+    targetCode: requestedCurrencyCode,
+  });
+
+  await DummyTicket.findOneAndUpdate(
+    { sessionId },
+    {
+      $set: {
+        totalAmount,
+        currency: currencyCode,
+      },
+    },
+  );
+
   return paymentService.createCheckoutSession({
-    amount: formData.totalAmount,
-    currency: 'aed',
-    productName: `${formData.type} Flight Reservation`,
-    customerEmail: formData.email,
-    successUrl: `${process.env.MDT_FRONTEND}/payment-successful?sessionId=${formData.sessionId}`,
+    amount: totalAmount,
+    currency: String(currencyCode || currency || 'AED').toLowerCase(),
+    productName: `${ticket.type} Flight Reservation`,
+    customerEmail: ticket.email,
+    successUrl: `${process.env.MDT_FRONTEND}/payment-successful?sessionId=${sessionId}`,
     cancelUrl: `${process.env.MDT_FRONTEND}/booking/review-details`,
     metadata: {
       productType: 'ticket',
       entity: 'DUMMY_TICKET',
-      customer: formData.leadPassenger,
-      sessionId: formData.sessionId,
-      from: formData.from,
-      to: formData.to,
-      departureDate: formData.departureDate,
-      returnDate: formData.returnDate,
+      customer: ticket.leadPassenger,
+      sessionId,
+      from: ticket.from,
+      to: ticket.to,
+      departureDate: ticket.departureDate,
+      returnDate: ticket.returnDate,
     },
-    idempotencyKey: formData.sessionId,
+    idempotencyKey: sessionId,
   });
 };
 
@@ -208,7 +280,19 @@ exports.handleStripeSuccess = async (session) => {
 
   let shouldClearAffiliateAttribution = false;
 
-  if (existingTicket.affiliate && existingTicket.email) {
+  if (existingTicket.affiliate || existingTicket.affiliateId) {
+    const activeAffiliate = existingTicket.affiliate
+      ? await Affiliate.findOne({ _id: existingTicket.affiliate, isActive: true }).select('_id')
+      : null;
+    const capturedAt = parseAffiliateCapturedAt(existingTicket.affiliateCapturedAt);
+    const withinAttributionWindow = isAffiliateAttributionWithinWindow(capturedAt, new Date());
+
+    if (!activeAffiliate || !withinAttributionWindow) {
+      shouldClearAffiliateAttribution = true;
+    }
+  }
+
+  if (!shouldClearAffiliateAttribution && existingTicket.affiliate && existingTicket.email) {
     const hasPreviousPaidAffiliatePurchase = await DummyTicket.exists({
       _id: { $ne: existingTicket._id },
       email: normalizeEmail(existingTicket.email),
@@ -227,7 +311,9 @@ exports.handleStripeSuccess = async (session) => {
         amountPaid: { currency, amount },
         transactionId,
         orderStatus: 'PENDING',
-        ...(shouldClearAffiliateAttribution ? { affiliate: null, affiliateId: null } : {}),
+        ...(shouldClearAffiliateAttribution
+          ? { affiliate: null, affiliateId: null, affiliateCapturedAt: null }
+          : {}),
       },
     },
     { new: true },

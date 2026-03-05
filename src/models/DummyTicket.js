@@ -78,6 +78,12 @@ const DummyTicketSchema = mongoose.Schema(
       returnFlight: { type: FlightSchema, default: null },
     },
     totalAmount: { type: Number },
+    currency: {
+      type: String,
+      default: 'AED',
+      uppercase: true,
+      trim: true,
+    },
     amountPaid: {
       currency: { type: String },
       amount: { type: Number },
@@ -95,6 +101,10 @@ const DummyTicketSchema = mongoose.Schema(
       trim: true,
       default: null,
       match: [/^\d{9}$/, 'Affiliate ID must be exactly 9 digits'],
+    },
+    affiliateCapturedAt: {
+      type: Date,
+      default: null,
     },
     affiliate: { type: mongoose.Schema.ObjectId, ref: 'Affiliate', default: null },
   },
@@ -120,6 +130,7 @@ DummyTicketSchema.index({ orderStatus: 1 });
 DummyTicketSchema.index({ paymentStatus: 1 });
 DummyTicketSchema.index({ affiliateId: 1 });
 DummyTicketSchema.index({ affiliate: 1 });
+DummyTicketSchema.index({ affiliateCapturedAt: 1 });
 
 const DummyTicket = mongoose.model('dummyTicket', DummyTicketSchema);
 

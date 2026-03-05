@@ -8,6 +8,8 @@ const emailRoutes = require('./email.routes');
 const blogRoutes = require('./blog.routes');
 const authRoutes = require('./auth.routes');
 const affiliateRoutes = require('./affiliate.routes');
+const pricingRoutes = require('./pricing.routes');
+const currencyRoutes = require('./currency.routes');
 
 router.use('/ticket', ticketRoutes);
 router.use('/insurance', insuranceRoutes);
@@ -18,5 +20,7 @@ router.use('/email', emailRoutes);
 router.use('/blogs', blogRoutes);
 router.use('/auth', authRoutes);
 router.use('/affiliates', affiliateRoutes);
+router.use('/pricing', pricingRoutes);
+router.use('/currencies', currencyRoutes);
 
 module.exports = router;

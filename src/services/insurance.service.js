@@ -2,11 +2,9 @@ const AppError = require('../utils/appError');
 const InsuranceApplication = require('../models/InsuranceApplication');
 const { insurancePaymentCompletionEmail } = require('./notification.service');
 
-const isProduction = process.env.NODE_ENV === 'production';
-
-const WISURL = isProduction ? 'https://admin.wisconnectz.com/api/v1' : 'https://admin.uat.wisdevelopments.com/api/v1';
-const agency_id = process.env.WIS_AGENCY_ID;
-const agency_code = process.env.WIS_AGENCY_CODE;
+const WIS_URL = process.env.WIS_URL;
+const WIS_AGENCY_ID = process.env.WIS_AGENCY_ID;
+const WIS_AGENCY_CODE = process.env.WIS_AGENCY_CODE;
 
 const formatDateISO = (value) => {
   if (!value) return value;
@@ -16,10 +14,10 @@ const formatDateISO = (value) => {
 };
 
 async function fetchWIS(slug, data = {}) {
-  const res = await fetch(`${WISURL}/${slug}`, {
+  const res = await fetch(`${WIS_URL}/${slug}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ agency_id, agency_code, ...data }),
+    body: JSON.stringify({ agency_id: WIS_AGENCY_ID, agency_code: WIS_AGENCY_CODE, ...data }),
   });
 
   const json = await res.json();
