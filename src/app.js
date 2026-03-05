@@ -26,7 +26,7 @@ app.use(
       'https://admin.mydummyticket.ae',
     ],
     credentials: true,
-    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Origin', 'x-session-id'],
     exposedHeaders: ['Set-Cookie'],
   }),
