@@ -89,7 +89,7 @@ exports.convertFromBase = async ({ amount, targetCode }) => {
   const targetCurrency =
     currencies.find((currency) => currency.code === String(targetCode || '').toUpperCase()) || baseCurrency;
 
-  const conversionRate = Number((((baseCurrency?.rate || 1) / (targetCurrency?.rate || 1)).toFixed(8)));
+  const conversionRate = Number(((baseCurrency?.rate || 1) / (targetCurrency?.rate || 1)).toFixed(8));
   const convertedAmount = Number((parsedAmount * conversionRate).toFixed(2));
 
   return {

@@ -1,4 +1,5 @@
 const Blog = require('../models/Blog');
+const BlogTag = require('../models/BlogTag');
 const slugify = require('slugify');
 const AppError = require('../utils/appError');
 const { uploadImageToCloudinary, deleteCloudinaryFile } = require('../utils/cloudinary');
@@ -7,9 +8,10 @@ const { generateUniqueSlug, estimateReadingTime } = require('../utils/blogHelper
 exports.getBlogs = async ({ page, limit, status, tag, search }) => {
   const skip = (page - 1) * limit;
   const filter = {};
+  const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
   if (status && status !== 'all') filter.status = status;
-  if (tag) filter.tags = tag;
+  if (tag) filter.tags = new RegExp(`^${escapeRegex(tag)}$`, 'i');
 
   if (search) {
     filter.$or = [
@@ -68,7 +70,52 @@ exports.normalizeTags = (tags) => {
   if (!tags) return [];
 
   const arr = Array.isArray(tags) ? tags : [tags];
-  return [...new Set(arr.map((t) => t.trim().toLowerCase()))].filter(Boolean);
+  const normalized = arr.map((tag) => String(tag || '').trim()).filter(Boolean);
+  const seen = new Set();
+
+  return normalized.filter((tag) => {
+    const key = tag.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+exports.ensureTagsExist = async (tags = []) => {
+  if (!Array.isArray(tags) || tags.length === 0) return [];
+
+  const existingTags = await BlogTag.find().select('name').lean();
+  const nameByLower = new Map(existingTags.map((tag) => [String(tag.name).toLowerCase(), tag.name]));
+  const normalizeLoose = (value = '') => String(value).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const nameByLoose = new Map(existingTags.map((tag) => [normalizeLoose(tag.name), tag.name]));
+
+  const resolved = [];
+  const missing = [];
+
+  for (const tag of tags) {
+    const input = String(tag || '').trim();
+    if (!input) continue;
+
+    const byCaseInsensitive = nameByLower.get(input.toLowerCase());
+    if (byCaseInsensitive) {
+      resolved.push(byCaseInsensitive);
+      continue;
+    }
+
+    const byLooseMatch = nameByLoose.get(normalizeLoose(input));
+    if (byLooseMatch) {
+      resolved.push(byLooseMatch);
+      continue;
+    }
+
+    missing.push(input);
+  }
+
+  if (missing.length > 0) {
+    throw new AppError(`Unknown tag(s): ${missing.join(', ')}`, 400);
+  }
+
+  return [...new Set(resolved)];
 };
 
 exports.saveCoverImage = async (req, uniqueSlug, blog = null, targetSlug = null) => {

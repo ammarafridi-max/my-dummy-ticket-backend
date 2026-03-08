@@ -78,6 +78,7 @@ exports.createBlogPost = catchAsync(async (req, res, next) => {
   const { uniqueSlug, readingTime } = await blogService.generateSlugAndReadingTime(customSlug, title, content);
 
   const normalizedTags = blogService.normalizeTags(tags);
+  const resolvedTags = await blogService.ensureTagsExist(normalizedTags);
   const coverImageUrl = await blogService.saveCoverImage(req, uniqueSlug);
 
   const blog = await Blog.create({
@@ -87,7 +88,7 @@ exports.createBlogPost = catchAsync(async (req, res, next) => {
     excerpt,
     coverImageUrl,
     status: requestedStatus,
-    tags: normalizedTags,
+    tags: resolvedTags,
     metaTitle: metaTitle || title,
     metaDescription,
     author: req.user._id,
@@ -112,7 +113,10 @@ exports.updateBlogPost = catchAsync(async (req, res, next) => {
 
   blogService.validateBlog(req, { requireCoverImage: false, requireTitle: false, requireContent: false });
 
-  const normalizedTags = req.body.tags === undefined ? undefined : blogService.normalizeTags(req.body.tags);
+  let normalizedTags = req.body.tags === undefined ? undefined : blogService.normalizeTags(req.body.tags);
+  if (normalizedTags !== undefined) {
+    normalizedTags = await blogService.ensureTagsExist(normalizedTags);
+  }
   const hasContentUpdate = typeof req.body.content === 'string';
   const hasStatusUpdate = typeof req.body.status === 'string';
   const hasScheduledAtUpdate = Object.prototype.hasOwnProperty.call(req.body, 'scheduledAt');
