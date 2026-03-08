@@ -8,6 +8,14 @@ const blogTagSchema = new mongoose.Schema(
       trim: true,
       maxlength: 80,
     },
+    slug: {
+      type: String,
+      required: [true, 'Tag slug is required'],
+      unique: true,
+      lowercase: true,
+      trim: true,
+      index: true,
+    },
     description: {
       type: String,
       trim: true,
@@ -31,5 +39,6 @@ const blogTagSchema = new mongoose.Schema(
 );
 
 blogTagSchema.index({ name: 1 }, { unique: true });
+blogTagSchema.index({ slug: 1 }, { unique: true });
 
 module.exports = mongoose.model('BlogTag', blogTagSchema);

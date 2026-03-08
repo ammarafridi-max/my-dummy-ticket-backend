@@ -2,6 +2,8 @@ const BlogTag = require('../models/BlogTag');
 const Blog = require('../models/Blog');
 const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
+const slugify = require('slugify');
+const mongoose = require('mongoose');
 
 function normalizeName(name = '') {
   return decodeHtmlEntities(name).trim();
@@ -50,7 +52,42 @@ async function buildUniqueCopyName(baseName) {
   return candidate;
 }
 
+function buildBaseSlug(name = '') {
+  return slugify(String(name || ''), { lower: true, strict: true, trim: true }) || 'tag';
+}
+
+async function buildUniqueSlug(name, excludeId = null) {
+  const baseSlug = buildBaseSlug(name);
+  let candidate = baseSlug;
+  let counter = 2;
+
+  while (
+    await BlogTag.exists({
+      slug: candidate,
+      ...(excludeId ? { _id: { $ne: excludeId } } : {}),
+    })
+  ) {
+    candidate = `${baseSlug}-${counter}`;
+    counter += 1;
+  }
+
+  return candidate;
+}
+
+async function backfillMissingSlugs() {
+  const tagsWithoutSlug = await BlogTag.find({
+    $or: [{ slug: { $exists: false } }, { slug: '' }, { slug: null }],
+  });
+
+  for (const tag of tagsWithoutSlug) {
+    tag.slug = await buildUniqueSlug(tag.name, tag._id);
+    await tag.save();
+  }
+}
+
 exports.getAllBlogTags = catchAsync(async (req, res) => {
+  await backfillMissingSlugs();
+
   const search = String(req.query.search || '').trim();
   const filter = search ? { name: new RegExp(escapeRegex(search), 'i') } : {};
 
@@ -60,6 +97,28 @@ exports.getAllBlogTags = catchAsync(async (req, res) => {
     status: 'success',
     results: tags.length,
     data: tags,
+  });
+});
+
+exports.getBlogTagBySlug = catchAsync(async (req, res, next) => {
+  const slug = String(req.params.slug || '').trim().toLowerCase();
+  let tag = await BlogTag.findOne({ slug });
+
+  // Backward compatibility for older ID-based links.
+  if (!tag && mongoose.Types.ObjectId.isValid(slug)) {
+    tag = await BlogTag.findById(slug);
+  }
+
+  if (!tag) return next(new AppError('Blog tag not found', 404));
+
+  if (!tag.slug) {
+    tag.slug = await buildUniqueSlug(tag.name, tag._id);
+    await tag.save();
+  }
+
+  res.status(200).json({
+    status: 'success',
+    data: tag,
   });
 });
 
@@ -78,6 +137,7 @@ exports.createBlogTag = catchAsync(async (req, res) => {
 
   const created = await BlogTag.create({
     name,
+    slug: await buildUniqueSlug(name),
     description: decodeHtmlEntities(req.body.description || ''),
     metaTitle: decodeHtmlEntities(req.body.metaTitle || ''),
     metaDescription: decodeHtmlEntities(req.body.metaDescription || ''),
@@ -98,6 +158,7 @@ exports.updateBlogTag = catchAsync(async (req, res, next) => {
 
   if (Object.prototype.hasOwnProperty.call(req.body, 'name')) {
     tag.name = await ensureUniqueName(req.body.name, tag._id);
+    tag.slug = await buildUniqueSlug(tag.name, tag._id);
   }
   if (Object.prototype.hasOwnProperty.call(req.body, 'description')) {
     tag.description = decodeHtmlEntities(req.body.description || '');
@@ -143,8 +204,11 @@ exports.duplicateBlogTag = catchAsync(async (req, res, next) => {
   const tag = await BlogTag.findById(req.params.id);
   if (!tag) return next(new AppError('Blog tag not found', 404));
 
+  const duplicatedName = await buildUniqueCopyName(tag.name);
+
   const duplicated = await BlogTag.create({
-    name: await buildUniqueCopyName(tag.name),
+    name: duplicatedName,
+    slug: await buildUniqueSlug(duplicatedName),
     description: tag.description || '',
     metaTitle: tag.metaTitle || '',
     metaDescription: tag.metaDescription || '',
