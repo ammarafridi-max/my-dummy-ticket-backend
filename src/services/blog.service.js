@@ -5,13 +5,15 @@ const AppError = require('../utils/appError');
 const { uploadImageToCloudinary, deleteCloudinaryFile } = require('../utils/cloudinary');
 const { generateUniqueSlug, estimateReadingTime } = require('../utils/blogHelper');
 
-exports.getBlogs = async ({ page, limit, status, tag, search }) => {
-  const skip = (page - 1) * limit;
+exports.getBlogs = async ({ page, limit, status, tag, search, author }) => {
+  let currentPage = Math.max(1, parseInt(page, 10) || 1);
+  const pageSize = Math.max(1, parseInt(limit, 10) || 10);
   const filter = {};
   const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
   if (status && status !== 'all') filter.status = status;
-  if (tag) filter.tags = new RegExp(`^${escapeRegex(tag)}$`, 'i');
+  if (tag && tag !== 'all') filter.tags = new RegExp(`^${escapeRegex(tag)}$`, 'i');
+  if (author && author !== 'all') filter.author = author;
 
   if (search) {
     filter.$or = [
@@ -21,12 +23,28 @@ exports.getBlogs = async ({ page, limit, status, tag, search }) => {
     ];
   }
 
-  const [blogs, total] = await Promise.all([
-    Blog.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('author'),
-    Blog.countDocuments(filter),
-  ]);
+  const total = await Blog.countDocuments(filter);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  if (currentPage > totalPages) currentPage = totalPages;
 
-  const result = { blogs, total };
+  const blogs = await Blog.find(filter)
+    .sort({ createdAt: -1 })
+    .skip((currentPage - 1) * pageSize)
+    .limit(pageSize)
+    .populate('author');
+
+  const result = {
+    blogs,
+    total,
+    pagination: {
+      page: currentPage,
+      limit: pageSize,
+      total,
+      totalPages,
+      hasNextPage: currentPage < totalPages,
+      hasPrevPage: currentPage > 1,
+    },
+  };
 
   return result;
 };

@@ -30,7 +30,6 @@ const DummyTicketPricingSchema = new mongoose.Schema(
     key: {
       type: String,
       required: true,
-      unique: true,
       default: 'dummy-ticket',
       enum: ['dummy-ticket'],
     },
@@ -52,5 +51,7 @@ const DummyTicketPricingSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
+
+DummyTicketPricingSchema.index({ key: 1 }, { unique: true });
 
 module.exports = mongoose.model('DummyTicketPricing', DummyTicketPricingSchema);

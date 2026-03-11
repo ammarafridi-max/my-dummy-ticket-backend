@@ -14,7 +14,6 @@ const blogTagSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
-      index: true,
     },
     description: {
       type: String,
@@ -39,6 +38,5 @@ const blogTagSchema = new mongoose.Schema(
 );
 
 blogTagSchema.index({ name: 1 }, { unique: true });
-blogTagSchema.index({ slug: 1 }, { unique: true });
 
 module.exports = mongoose.model('BlogTag', blogTagSchema);

@@ -9,14 +9,15 @@ exports.getBlogPosts = catchAsync(async (req, res, next) => {
 
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { status, tag, search } = req.query;
+  const { status, tag, search, author } = req.query;
 
-  const { blogs, total } = await blogService.getBlogs({
+  const { blogs, pagination } = await blogService.getBlogs({
     page,
     limit,
     status,
     tag,
     search,
+    author,
   });
 
   res.status(200).json({
@@ -24,12 +25,7 @@ exports.getBlogPosts = catchAsync(async (req, res, next) => {
     results: blogs.length,
     data: {
       blogs,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
+      pagination,
     },
   });
 });
