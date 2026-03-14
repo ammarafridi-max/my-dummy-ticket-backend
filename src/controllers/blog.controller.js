@@ -59,9 +59,20 @@ exports.getBlogPostById = catchAsync(async (req, res, next) => {
 });
 
 exports.createBlogPost = catchAsync(async (req, res, next) => {
-  const { title, slug: customSlug, content, excerpt, status, tags, metaTitle, metaDescription } = req.body;
+  const {
+    title,
+    slug: customSlug,
+    content,
+    excerpt,
+    quickAnswer,
+    status,
+    tags,
+    metaTitle,
+    metaDescription,
+  } = req.body;
   const requestedStatus = status || 'draft';
   const scheduledAt = blogService.parseScheduledAt(req.body.scheduledAt);
+  const faqs = blogService.parseFaqs(req.body.faqs) || [];
 
   blogService.validateBlog(req, { requireCoverImage: true, requireTitle: true, requireContent: true });
   if (requestedStatus === 'scheduled' && !scheduledAt) {
@@ -82,9 +93,11 @@ exports.createBlogPost = catchAsync(async (req, res, next) => {
     slug: uniqueSlug,
     content,
     excerpt,
+    quickAnswer,
     coverImageUrl,
     status: requestedStatus,
     tags: resolvedTags,
+    faqs,
     metaTitle: metaTitle || title,
     metaDescription,
     author: req.user._id,
@@ -113,6 +126,7 @@ exports.updateBlogPost = catchAsync(async (req, res, next) => {
   if (normalizedTags !== undefined) {
     normalizedTags = await blogService.ensureTagsExist(normalizedTags);
   }
+  const faqs = blogService.parseFaqs(req.body.faqs);
   const hasContentUpdate = typeof req.body.content === 'string';
   const hasStatusUpdate = typeof req.body.status === 'string';
   const hasScheduledAtUpdate = Object.prototype.hasOwnProperty.call(req.body, 'scheduledAt');
@@ -131,8 +145,10 @@ exports.updateBlogPost = catchAsync(async (req, res, next) => {
     slug: updatedSlug,
     content: req.body.content,
     excerpt: req.body.excerpt,
+    quickAnswer: req.body.quickAnswer,
     status: req.body.status,
     tags: normalizedTags,
+    faqs,
     metaTitle: req.body.metaTitle,
     metaDescription: req.body.metaDescription,
     scheduledAt: hasScheduledAtUpdate ? blogService.parseScheduledAt(req.body.scheduledAt) : undefined,

@@ -1,5 +1,22 @@
 const mongoose = require('mongoose');
 
+const faqSchema = new mongoose.Schema(
+  {
+    question: {
+      type: String,
+      required: [true, 'An FAQ must have a question'],
+      trim: true,
+      maxlength: 300,
+    },
+    answer: {
+      type: String,
+      required: [true, 'An FAQ must have an answer'],
+      trim: true,
+    },
+  },
+  { _id: false },
+);
+
 const blogSchema = new mongoose.Schema(
   {
     title: {
@@ -24,6 +41,11 @@ const blogSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    quickAnswer: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
     coverImageUrl: {
       type: String,
       required: [true, 'A blog post must have a cover image'],
@@ -40,6 +62,10 @@ const blogSchema = new mongoose.Schema(
       type: [String],
       default: [],
       index: true,
+    },
+    faqs: {
+      type: [faqSchema],
+      default: [],
     },
     metaTitle: {
       type: String,
