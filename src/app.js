@@ -24,6 +24,7 @@ app.use(
       'http://localhost:5174',
       'http://localhost:3000',
       'https://www.mydummyticket.ae',
+      'https://mydummyticket.ae',
       'https://test.mydummyticket.ae',
       'https://admin.mydummyticket.ae',
     ],
