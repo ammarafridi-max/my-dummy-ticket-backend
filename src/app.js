@@ -32,6 +32,7 @@ app.use(
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Origin', 'x-session-id'],
     exposedHeaders: ['Set-Cookie'],
+    maxAge: 600,
   }),
 );
 
