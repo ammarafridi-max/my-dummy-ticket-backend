@@ -56,16 +56,14 @@ app.use('/api', (req, res, next) => {
 
 app.use('/api', indexRoutes);
 
-['uploads'].forEach((dir) => {
-  app.use(
-    `/${dir}`,
-    express.static(path.join(__dirname, `public/${dir}`), {
-      setHeaders: (res) => {
-        res.set('Cross-Origin-Resource-Policy', 'cross-origin');
-      },
-    }),
-  );
-});
+app.use(
+  '/airlines',
+  express.static(path.join(__dirname, 'public/airlines'), {
+    setHeaders: (res) => {
+      res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+    },
+  }),
+);
 
 app.all('/*path', (req, res, next) => {
   next(new AppError(`Cannot find ${req.originalUrl}`, 404));
