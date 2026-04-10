@@ -95,7 +95,7 @@ const DummyTicketSchema = mongoose.Schema(
     transactionId: {
       type: String,
     },
-    handledBy: { type: mongoose.Schema.ObjectId, ref: 'User', default: null },
+    handledBy: { type: mongoose.Schema.ObjectId, ref: 'AdminUser', default: null },
     affiliateId: {
       type: String,
       trim: true,

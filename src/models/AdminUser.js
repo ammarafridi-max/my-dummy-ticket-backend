@@ -1,8 +1,9 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
 const bcrypt = require('bcryptjs');
+const USERNAME_REGEX = /^[a-z0-9][a-z0-9._-]{7,49}$/;
 
-const userSchema = new mongoose.Schema(
+const adminUserSchema = new mongoose.Schema(
   {
     name: {
       type: String,
@@ -20,6 +21,7 @@ const userSchema = new mongoose.Schema(
       minlength: [8, 'Username must be at least 8 characters long'],
       maxlength: 50,
       index: true,
+      match: [USERNAME_REGEX, 'Username must use lowercase letters, numbers, dots, underscores, or hyphens'],
     },
 
     email: {
@@ -58,16 +60,17 @@ const userSchema = new mongoose.Schema(
   {
     timestamps: true,
     toJSON: true,
+    collection: 'users',
   },
 );
 
-userSchema.pre('save', async function () {
+adminUserSchema.pre('save', async function () {
   if (!this.isModified('password')) return;
   this.password = await bcrypt.hash(this.password, 12);
 });
 
-userSchema.methods.correctPassword = async function (candidatePassword, userPassword) {
+adminUserSchema.methods.correctPassword = async function (candidatePassword, userPassword) {
   return bcrypt.compare(candidatePassword, userPassword);
 };
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model('AdminUser', adminUserSchema);

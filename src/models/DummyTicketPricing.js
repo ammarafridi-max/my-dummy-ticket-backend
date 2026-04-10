@@ -45,7 +45,7 @@ const DummyTicketPricingSchema = new mongoose.Schema(
     },
     updatedBy: {
       type: mongoose.Schema.ObjectId,
-      ref: 'User',
+      ref: 'AdminUser',
       default: null,
     },
   },

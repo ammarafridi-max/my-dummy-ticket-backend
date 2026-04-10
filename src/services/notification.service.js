@@ -12,19 +12,13 @@ function formatToDDMMM(dateStr) {
   return `${Number(day)}${months[Number(month) - 1]}`;
 }
 
-exports.sendInsuranceFormSubmission = async ({
-  quoteId,
-  schemeId,
-  journeyType,
-  startDate,
-  endDate,
-  quantity,
-  passengers,
-}) => {
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'info@mydummyticket.ae';
+
+exports.sendInsuranceFormSubmission = async ({ passengers }) => {
   const leadPassenger = `${passengers[0].firstName} ${passengers[0].lastName}`;
 
   await sendEmail({
-    email: 'info@mydummyticket.ae',
+    email: ADMIN_EMAIL,
     subject: `Travel insurance form submission by ${leadPassenger}`,
     name: 'MDT Team',
   });
@@ -92,8 +86,8 @@ exports.insurancePaymentCompletionEmail = async ({
   `;
 
   await sendEmail({
-    email: 'info@mydummyticket.ae',
-    name: 'Payments - My Dummy Ticket',
+    email: ADMIN_EMAIL,
+    name: 'MDT Team',
     subject: `Travel insurance payment received by ${leadTraveler || 'customer'}`,
     htmlContent,
   });
