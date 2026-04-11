@@ -93,8 +93,8 @@ const buildWISQuotePayload = (body) => {
 const buildWISFinalizePayload = (body, options = {}) => {
   const data = {};
   const paymentSyncToken = String(options.paymentSyncToken || '').trim();
-  const successUrl = new URL(`${process.env.FRONTEND_URL}/payment`);
-  const failedUrl = new URL(`${process.env.FRONTEND_URL}/passengers`);
+  const successUrl = new URL(`${process.env.MDT_FRONTEND}/insurance-booking/payment`);
+  const failedUrl = new URL(`${process.env.MDT_FRONTEND}/insurance-booking/passengers`);
 
   data.quote_id = Number(body.quoteId);
   data.scheme_id = Number(body.schemeId);
