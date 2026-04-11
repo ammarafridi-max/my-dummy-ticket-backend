@@ -192,20 +192,18 @@ exports.ensureTagsExist = async (tags = []) => {
   return [...new Set(resolved)];
 };
 
-exports.saveCoverImage = async (req, uniqueSlug, blog = null, targetSlug = null) => {
-  if (!req.file) return blog?.coverImageUrl;
+exports.saveCoverImage = async (req, blogId, existingImageUrl = null) => {
+  if (!req.file) return existingImageUrl;
 
   try {
-    if (blog?.coverImageUrl) {
-      await deleteCloudinaryFile(blog.coverImageUrl);
+    if (existingImageUrl) {
+      await deleteCloudinaryFile(existingImageUrl);
     }
 
-    const slug = targetSlug || blog?.slug || uniqueSlug;
-    const folderName = `mdt/mdt_blog/${slug}`.replace(/\s+/g, '_');
-
+    const folderName = `mdt/blog/${blogId}`;
     return await uploadImageToCloudinary(req.file.buffer, folderName);
   } catch (err) {
-    logger.error('Cover image upload failed', { error: err, slug: targetSlug || blog?.slug || uniqueSlug });
+    logger.error('Cover image upload failed', { error: err, blogId });
     throw new AppError('Failed to upload cover image', 500);
   }
 };

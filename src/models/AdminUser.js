@@ -60,7 +60,7 @@ const adminUserSchema = new mongoose.Schema(
   {
     timestamps: true,
     toJSON: true,
-    collection: 'users',
+    collection: 'admin-users',
   },
 );
 

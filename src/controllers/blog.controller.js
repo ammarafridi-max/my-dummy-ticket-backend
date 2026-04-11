@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 const { deleteCloudinaryFolder } = require('../utils/cloudinary');
@@ -114,9 +115,11 @@ exports.createBlogPost = catchAsync(async (req, res, next) => {
 
   const normalizedTags = blogService.normalizeTags(tags);
   const resolvedTags = await blogService.ensureTagsExist(normalizedTags);
-  const coverImageUrl = await blogService.saveCoverImage(req, uniqueSlug);
+  const blogId = new mongoose.Types.ObjectId();
+  const coverImageUrl = await blogService.saveCoverImage(req, blogId);
 
   const blog = await Blog.create({
+    _id: blogId,
     title,
     slug: uniqueSlug,
     content,
@@ -211,7 +214,7 @@ exports.updateBlogPost = catchAsync(async (req, res, next) => {
     updateData.scheduledAt = finalScheduledAt;
   }
 
-  updateData.coverImageUrl = await blogService.saveCoverImage(req, blog.slug, blog, updateData.slug || blog.slug);
+  updateData.coverImageUrl = await blogService.saveCoverImage(req, blog._id, blog.coverImageUrl);
 
   const updatedBlog = await Blog.findByIdAndUpdate(req.params.id, updateData, {
     new: true,
@@ -229,7 +232,7 @@ exports.deleteBlogPost = catchAsync(async (req, res, next) => {
   const blog = await Blog.findById(req.params.id);
   if (!blog) return next(new AppError('Blog post not found', 404));
 
-  const folderName = `mdt/mdt_blog/${blog.slug}`.replace(/\s+/g, '_');
+  const folderName = `mdt/blog/${blog._id}`;
 
   try {
     await deleteCloudinaryFolder(folderName);
