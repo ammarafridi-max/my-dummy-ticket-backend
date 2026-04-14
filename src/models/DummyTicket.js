@@ -73,6 +73,7 @@ const DummyTicketSchema = mongoose.Schema(
       immediate: { type: Boolean },
       deliveryDate: { type: String },
     },
+    adminDeliveryEmailSent: { type: Boolean, default: false },
     flightDetails: {
       departureFlight: FlightSchema,
       returnFlight: { type: FlightSchema, default: null },

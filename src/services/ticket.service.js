@@ -4,7 +4,7 @@ const DummyTicket = require('../models/DummyTicket');
 const Affiliate = require('../models/Affiliate');
 const { stripe } = require('../utils/stripe');
 const { v4: uuidv4 } = require('uuid');
-const { ticketPaymentCompletionEmail, ticketLaterDateDeliveryEmail } = require('./notification.service');
+const { ticketPaymentCompletionEmail, ticketLaterDateDeliveryEmail, ticketScheduledDeliveryEmail } = require('./notification.service');
 const paymentService = require('./payment.service');
 const pricingService = require('./dummyTicketPricing.service');
 const currencyService = require('./currency.service');
@@ -251,7 +251,7 @@ exports.createStripePaymentUrl = async (formData) => {
     currency: String(currencyCode || currency || 'AED').toLowerCase(),
     productName: `${ticket.type} Flight Reservation`,
     customerEmail: ticket.email,
-    successUrl: `${process.env.MDT_FRONTEND}/payment-successful?sessionId=${sessionId}`,
+    successUrl: `${process.env.MDT_FRONTEND}/booking/payment?sessionId=${sessionId}`,
     cancelUrl: `${process.env.MDT_FRONTEND}/booking/review-details`,
     metadata: {
       productType: 'ticket',
@@ -311,9 +311,7 @@ exports.handleStripeSuccess = async (session) => {
         amountPaid: { currency, amount },
         transactionId,
         orderStatus: 'PENDING',
-        ...(shouldClearAffiliateAttribution
-          ? { affiliate: null, affiliateId: null, affiliateCapturedAt: null }
-          : {}),
+        ...(shouldClearAffiliateAttribution ? { affiliate: null, affiliateId: null, affiliateCapturedAt: null } : {}),
       },
     },
     { new: true },
@@ -419,4 +417,67 @@ exports.updatePaymentAndCreateReservation = async (sessionId, currency, amount) 
   if (!doc) throw new Error('Ticket not found for session ID');
 
   return doc;
+};
+
+// ─── Scheduled delivery email ─────────────────────────────────────────────────
+// Called every minute by the scheduler in server.js.
+// Finds all paid tickets whose delivery date is today (UAE time, UTC+4) and
+// whose admin notification has not yet been sent, then emails the admin and
+// marks the ticket so the email is never sent twice.
+exports.sendDueDeliveryEmails = async () => {
+  const logger = require('../utils/logger');
+
+  // Derive today's date in UAE time (UTC+4) as 'YYYY-MM-DD'
+  const nowUAE = new Date(Date.now() + 4 * 60 * 60 * 1000);
+  const todayUAE = nowUAE.toISOString().split('T')[0];
+
+  const filter = {
+    paymentStatus: 'PAID',
+    orderStatus: { $in: ['PENDING', 'PROGRESS'] },
+    'ticketDelivery.immediate': false,
+    'ticketDelivery.deliveryDate': todayUAE,
+    adminDeliveryEmailSent: { $ne: true },
+  };
+
+  // Atomically claim one ticket at a time: the flag is flipped to true in the
+  // same DB round-trip as the query, so concurrent scheduler runs can never
+  // claim the same ticket and no ticket is ever emailed twice.
+  let ticket;
+  while (
+    (ticket = await DummyTicket.findOneAndUpdate(
+      filter,
+      { $set: { adminDeliveryEmailSent: true } },
+      { new: false }, // return the document as it was before the update
+    )) !== null
+  ) {
+    try {
+      await ticketScheduledDeliveryEmail({
+        createdAt: ticket.createdAt,
+        type: ticket.type,
+        from: ticket.from,
+        to: ticket.to,
+        departureDate: ticket.departureDate,
+        returnDate: ticket.returnDate,
+        leadPassenger: ticket.leadPassenger,
+        email: ticket.email,
+        number:
+          ticket.phoneNumber?.code && ticket.phoneNumber?.digits
+            ? ticket.phoneNumber.code + ticket.phoneNumber.digits
+            : 'Not provided',
+        flightDetails: ticket.flightDetails,
+        ticketValidity: ticket.ticketValidity,
+        ticketDelivery: ticket.ticketDelivery,
+        passengers: ticket.passengers,
+        message: ticket.message,
+      });
+    } catch (err) {
+      // Email failed after the ticket was already claimed — log it so the
+      // admin can follow up manually. The flag stays true to prevent retries.
+      logger.error('Failed to send scheduled delivery email', {
+        ticketId: ticket._id,
+        sessionId: ticket.sessionId,
+        error: err,
+      });
+    }
+  }
 };
